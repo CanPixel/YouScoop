@@ -94,7 +94,7 @@ fn emit_progress(app: &AppHandle, p: &ModelProgress) {
     let _ = app.emit("model-progress", p);
 }
 
-/// Best available Whisper model already on disk that is NOT the registry one —
+/// Best available Whisper model already on disk that is NOT the registry one
 /// e.g. an older `ggml-base` left over from a previous app version. Used as an
 /// offline fallback when the current registry model can't be downloaded.
 pub fn any_whisper_fallback(app: &AppHandle) -> Option<PathBuf> {

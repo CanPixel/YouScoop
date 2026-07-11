@@ -86,6 +86,26 @@ pub async fn ingest(app: AppHandle, state: Arc<AppState>, url: String) {
         }
     };
 
+    // Longer videos take ages to download, describe, and index locally.
+    const MAX_DURATION_SECS: f64 = 90.0 * 60.0;
+    if info.duration_secs > MAX_DURATION_SECS {
+        emit(
+            &app,
+            IngestProgress {
+                video_id: String::new(),
+                stage: "error".into(),
+                progress: 0.0,
+                detail: format!(
+                    "\"{}\" is {} long — SmolTalk caps videos at 1:30:00 to keep local processing reasonable.",
+                    info.title,
+                    crate::rag::format_ts(info.duration_secs),
+                ),
+                meta: None,
+            },
+        );
+        return;
+    }
+
     let id = info.id.clone();
 
     // Already fully ingested? Just surface it.
@@ -287,7 +307,7 @@ async fn run_stages(
             }
 
             // Load (or reload, if the model file changed) and transcribe in one
-            // blocking task — the load alone can take a few seconds.
+            // blocking task - the load alone can take a few seconds.
             let whisper = state.whisper.clone();
             let wanted_path = whisper_path.to_string_lossy().into_owned();
             let app_load = app.clone();

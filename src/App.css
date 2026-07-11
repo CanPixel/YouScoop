@@ -993,6 +993,31 @@ body {
   border-color: rgba(255, 255, 255, 0.35);
 }
 
+.msg-copy {
+  display: block;
+  margin-top: 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+}
+.msg-bubble:hover .msg-copy {
+  opacity: 1;
+}
+.msg-copy:hover {
+  color: var(--text);
+}
+.msg-copy.copied {
+  opacity: 1;
+  color: var(--ok);
+}
+
 .typing {
   display: inline-flex;
   gap: 4px;
@@ -1048,12 +1073,12 @@ body {
 }
 .chat-form {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 8px 8px 8px 14px;
+  padding: 5px 5px 5px 16px;
   transition: border-color 0.15s;
 }
 .chat-form:focus-within {
@@ -1062,13 +1087,18 @@ body {
 .chat-input {
   flex: 1;
   font: inherit;
+  line-height: 20px;
   background: transparent;
   border: none;
   outline: none;
   color: var(--text);
   resize: none;
+  box-sizing: border-box;
+  height: 34px;
   max-height: 120px;
+  padding: 7px 0;
   user-select: text;
+  display: block;
 }
 .chat-input::placeholder {
   color: var(--text-faint);

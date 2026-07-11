@@ -101,7 +101,7 @@ export default function SetupGate({ status, progress, engineError, onRefresh }: 
         </div>
 
         <p className="setup-footnote">
-          One-time download of ~1.8 GB from Hugging Face. Whisper is optional: it's only used
+          One-time download of ~1.8 GB from Hugging Face. Whisper is optional: it&apos;s only used
           when a video has no captions.
         </p>
       </div>

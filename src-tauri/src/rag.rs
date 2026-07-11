@@ -108,7 +108,7 @@ pub fn build_chat_prompt(
             continue;
         }
         // Render the chunk as ~12s sub-lines so citations land on the actual
-        // sentence. Adjacent chunks overlap by one cue — skip already-emitted ones.
+        // sentence. Adjacent chunks overlap by one cue: skip already-emitted ones.
         let mut line_start: Option<f64> = None;
         let mut line_text = String::new();
         for cue in &c.cues {
@@ -117,7 +117,7 @@ pub fn build_chat_prompt(
                 continue;
             }
             // Close the current line before this cue if it would stretch it
-            // past ~12s — each line's timestamp must stay close to its content.
+            // past ~12s: each line's timestamp must stay close to its content.
             if let Some(start) = line_start {
                 if cue.start - start >= 12.0 || line_text.len() >= 260 {
                     excerpt_lines.push_str(&format!("[{}] speech: {line_text}\n", format_ts(start)));
