@@ -39,7 +39,7 @@ impl AppState {
 
     pub fn require_engine(&self) -> Result<Arc<Mutex<Option<Engine>>>> {
         if !self.engine_loaded() {
-            return Err(anyhow!("The AI engine is not loaded yet — finish setup first."));
+            return Err(anyhow!("The AI engine is not loaded yet: finish setup first."));
         }
         Ok(self.engine.clone())
     }

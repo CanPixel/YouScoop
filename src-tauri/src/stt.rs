@@ -7,6 +7,10 @@ use crate::vtt::Cue;
 
 pub struct WhisperEngine {
     ctx: WhisperContext,
+    /// Which model file this engine was loaded from, so a registry upgrade
+    /// (e.g. base -> large-v3-turbo) triggers a reload instead of silently
+    /// using the stale model.
+    pub model_path: String,
 }
 
 impl WhisperEngine {
@@ -15,7 +19,7 @@ impl WhisperEngine {
         params.use_gpu(true);
         let ctx = WhisperContext::new_with_params(model_path, params)
             .map_err(|e| anyhow!("failed to load whisper model: {e}"))?;
-        Ok(Self { ctx })
+        Ok(Self { ctx, model_path: model_path.to_string() })
     }
 
     /// Transcribe 16 kHz mono f32 samples into timestamped cues.

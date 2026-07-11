@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import logo from "../assets/logo.png";
 import { formatDuration } from "../lib/format";
@@ -43,7 +43,7 @@ export default function Sidebar({
         <img src={logo} alt="" className="sidebar-logo" />
         <div>
           <div className="sidebar-title">SmolTalk</div>
-          <div className="sidebar-tagline">talk to your videos</div>
+          <div className="sidebar-tagline">Talk to your videos</div>
         </div>
       </div>
 
@@ -120,6 +120,23 @@ function VideoItem({
     ? STAGE_LABEL[ingest?.stage ?? ""] ?? "Processing"
     : null;
 
+  // Two-step delete: first click arms the button, second click removes.
+  // (window.confirm doesn't work inside the Tauri webview.)
+  const [confirming, setConfirming] = useState(false);
+  const disarmTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(disarmTimer.current), []);
+
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirming) {
+      onRemove();
+      return;
+    }
+    setConfirming(true);
+    window.clearTimeout(disarmTimer.current);
+    disarmTimer.current = window.setTimeout(() => setConfirming(false), 3000);
+  };
+
   return (
     <div className={`video-item ${active ? "active" : ""}`} onClick={onSelect}>
       <div className="video-thumb">
@@ -163,14 +180,12 @@ function VideoItem({
         </div>
       </div>
       <button
-        className="video-remove"
-        title="Remove from library"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
+        className={`video-remove ${confirming ? "confirming" : ""}`}
+        title={confirming ? "Click again to remove" : "Remove from library"}
+        onClick={handleRemoveClick}
+        onMouseLeave={() => setConfirming(false)}
       >
-        ×
+        {confirming ? "Remove?" : "×"}
       </button>
     </div>
   );

@@ -44,7 +44,7 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
         <div className="chat-head-title">Chat</div>
         <div className="chat-head-sub">
           {ready
-            ? `${meta.chunkCount} indexed moments · SmolVLM2 2.2B`
+            ? `${meta.chunkCount} indexed moments · Qwen3 4B`
             : "Available once processing finishes"}
         </div>
       </header>

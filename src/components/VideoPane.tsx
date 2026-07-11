@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { formatTs } from "../lib/format";
 import type { ChunkPublic, IngestProgress, VideoMeta } from "../types";
 
@@ -121,6 +122,15 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
             </>
           )}
         </div>
+        {meta.url && (
+          <button
+            className="video-source-link"
+            title={meta.url}
+            onClick={() => void openUrl(meta.url).catch(console.error)}
+          >
+            ▶ Watch on YouTube ↗
+          </button>
+        )}
       </div>
 
       {processing && (

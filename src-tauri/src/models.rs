@@ -17,11 +17,11 @@ pub struct ModelSpec {
     pub bytes: u64,
 }
 
-pub const MODELS: [ModelSpec; 4] = [
+pub const MODELS: [ModelSpec; 5] = [
     ModelSpec {
         id: "vlm",
         label: "SmolVLM2 2.2B Instruct",
-        detail: "Vision-language model — describes frames and answers questions (Q4_K_M)",
+        detail: "Vision-language model: describes video frames (Q4_K_M)",
         url: "https://huggingface.co/ggml-org/SmolVLM2-2.2B-Instruct-GGUF/resolve/main/SmolVLM2-2.2B-Instruct-Q4_K_M.gguf",
         file: "SmolVLM2-2.2B-Instruct-Q4_K_M.gguf",
         bytes: 1_112_602_656,
@@ -29,26 +29,34 @@ pub const MODELS: [ModelSpec; 4] = [
     ModelSpec {
         id: "mmproj",
         label: "SmolVLM2 vision projector",
-        detail: "Multimodal projector — connects the vision encoder to the LLM (Q8_0)",
+        detail: "Multimodal projector: connects the vision encoder to the LLM (Q8_0)",
         url: "https://huggingface.co/ggml-org/SmolVLM2-2.2B-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf",
         file: "mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf",
         bytes: 592_523_200,
     },
     ModelSpec {
+        id: "chat",
+        label: "Qwen3 4B Instruct",
+        detail: "Chat model: answers questions grounded in the video index (Q4_K_M)",
+        url: "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+        file: "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+        bytes: 2_497_281_120,
+    },
+    ModelSpec {
         id: "embed",
         label: "BGE-small embeddings",
-        detail: "Sentence embeddings powering semantic search over the video",
+        detail: "Sentence embeddings: powering semantic search over the video",
         url: "https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf",
         file: "bge-small-en-v1.5-q8_0.gguf",
         bytes: 36_806_944,
     },
     ModelSpec {
         id: "whisper",
-        label: "Whisper base",
-        detail: "Local transcription fallback when a video has no captions (Q5_1)",
-        url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
-        file: "ggml-base-q5_1.bin",
-        bytes: 59_707_625,
+        label: "Whisper large-v3-turbo",
+        detail: "Local transcription fallback when a video has no captions (Q5_0)",
+        url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
+        file: "ggml-large-v3-turbo-q5_0.bin",
+        bytes: 574_041_195,
     },
 ];
 
@@ -86,8 +94,38 @@ fn emit_progress(app: &AppHandle, p: &ModelProgress) {
     let _ = app.emit("model-progress", p);
 }
 
+/// Best available Whisper model already on disk that is NOT the registry one —
+/// e.g. an older `ggml-base` left over from a previous app version. Used as an
+/// offline fallback when the current registry model can't be downloaded.
+pub fn any_whisper_fallback(app: &AppHandle) -> Option<PathBuf> {
+    let current = spec("whisper")?.file;
+    let dir = models_dir(app).ok()?;
+    let mut best: Option<(u64, PathBuf)> = None;
+    for entry in std::fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        if name.starts_with("ggml-") && name.ends_with(".bin") && name != current {
+            let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
+            if size > 1_000_000 && best.as_ref().map(|(s, _)| size > *s).unwrap_or(true) {
+                best = Some((size, path));
+            }
+        }
+    }
+    best.map(|(_, p)| p)
+}
+
 /// Download a model with HTTP range resume. Emits `model-progress` events.
 pub async fn download(app: &AppHandle, id: &str) -> Result<()> {
+    download_with_progress(app, id, |_, _| {}).await
+}
+
+/// Like [`download`], but also reports `(received, total)` to a callback so
+/// callers (e.g. the ingest pipeline) can surface progress in their own UI.
+pub async fn download_with_progress(
+    app: &AppHandle,
+    id: &str,
+    mut on_progress: impl FnMut(u64, u64),
+) -> Result<()> {
     let spec = spec(id).ok_or_else(|| anyhow!("unknown model id: {id}"))?;
     let final_path = model_path(app, spec)?;
     if final_path.exists() && std::fs::metadata(&final_path)?.len() == spec.bytes {
@@ -101,7 +139,7 @@ pub async fn download(app: &AppHandle, id: &str) -> Result<()> {
     let part_path = final_path.with_extension("part");
     let mut offset: u64 = part_path.metadata().map(|m| m.len()).unwrap_or(0);
     if offset >= spec.bytes {
-        // Corrupt partial larger than target — start over.
+        // Corrupt partial larger than target: start over.
         let _ = std::fs::remove_file(&part_path);
         offset = 0;
     }
@@ -143,6 +181,7 @@ pub async fn download(app: &AppHandle, id: &str) -> Result<()> {
                 app,
                 &ModelProgress { id: id.into(), received, total, done: false, error: None },
             );
+            on_progress(received, total);
             last_emit = std::time::Instant::now();
         }
     }
@@ -158,7 +197,7 @@ pub async fn download(app: &AppHandle, id: &str) -> Result<()> {
                 received: got,
                 total,
                 done: false,
-                error: Some(format!("incomplete download ({got} of {total} bytes) — retry to resume")),
+                error: Some(format!("incomplete download ({got} of {total} bytes): retry to resume")),
             },
         );
         return Err(anyhow!("incomplete download"));
@@ -168,5 +207,6 @@ pub async fn download(app: &AppHandle, id: &str) -> Result<()> {
         app,
         &ModelProgress { id: id.into(), received: total, total, done: true, error: None },
     );
+    on_progress(total, total);
     Ok(())
 }

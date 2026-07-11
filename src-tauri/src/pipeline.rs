@@ -149,7 +149,7 @@ pub async fn ingest(app: AppHandle, state: Arc<AppState>, url: String) {
                     video_id: id.clone(),
                     stage: "ready".into(),
                     progress: 1.0,
-                    detail: "Ready — ask away!".into(),
+                    detail: "Ready. Ask away!".into(),
                     meta: Some(meta),
                 },
             );
@@ -230,36 +230,80 @@ async fn run_stages(
             c
         }
         None => {
-            emit_stage(app, &id, "transcribe", 0.0, "No captions — transcribing locally with Whisper…");
+            emit_stage(app, &id, "transcribe", 0.0, "No captions: transcribing locally with Whisper…");
+
+            // Resolve a Whisper model, downloading the registry one on demand.
+            // Progress mapping for this stage: download 0–25%, load ~28%, transcribe 30–100%.
+            let spec = models::spec("whisper").expect("whisper model in registry");
+            let mut whisper_path = models::model_path(app, spec)?;
+            if !models::is_downloaded(app, spec) {
+                let app3 = app.clone();
+                let id3 = id.clone();
+                let label = spec.label;
+                let dl = models::download_with_progress(app, "whisper", move |received, total| {
+                    let frac = if total > 0 { received as f32 / total as f32 } else { 0.0 };
+                    emit_stage(
+                        &app3,
+                        &id3,
+                        "transcribe",
+                        frac * 0.25,
+                        format!(
+                            "One-time download of {label} ({:.0} of {:.0} MB)…",
+                            received as f64 / 1e6,
+                            total as f64 / 1e6
+                        ),
+                    );
+                })
+                .await;
+                if let Err(e) = dl {
+                    match models::any_whisper_fallback(app) {
+                        Some(alt) => {
+                            let name = alt.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                            emit_stage(
+                                app,
+                                &id,
+                                "transcribe",
+                                0.26,
+                                format!("Download failed ({e}); falling back to {name}"),
+                            );
+                            whisper_path = alt;
+                        }
+                        None => {
+                            return Err(anyhow!(
+                                "This video has no captions, and downloading the Whisper model failed: {e}. \
+                                 Check your connection and press Retry."
+                            ));
+                        }
+                    }
+                }
+            }
+            if cancel.load(Ordering::Relaxed) {
+                return Err(anyhow!("cancelled"));
+            }
+
             let samples = media::extract_audio_f32(&video_path).await?;
             if cancel.load(Ordering::Relaxed) {
                 return Err(anyhow!("cancelled"));
             }
 
-            // Lazily load Whisper.
-            {
-                let mut guard = state.whisper.lock().unwrap();
-                if guard.is_none() {
-                    let spec = models::spec("whisper").unwrap();
-                    let path = models::model_path(app, spec)?;
-                    if !path.exists() {
-                        return Err(anyhow!(
-                            "This video has no captions and the Whisper model is not downloaded. \
-                             Download it from Settings and try again."
-                        ));
-                    }
-                    *guard = Some(WhisperEngine::load(&path.to_string_lossy())?);
-                }
-            }
-
+            // Load (or reload, if the model file changed) and transcribe in one
+            // blocking task — the load alone can take a few seconds.
             let whisper = state.whisper.clone();
+            let wanted_path = whisper_path.to_string_lossy().into_owned();
+            let app_load = app.clone();
+            let id_load = id.clone();
             let app2 = app.clone();
             let id2 = id.clone();
             let cues = tauri::async_runtime::spawn_blocking(move || {
-                let guard = whisper.lock().unwrap();
+                let mut guard = whisper.lock().unwrap();
+                let stale = guard.as_ref().map(|w| w.model_path != wanted_path).unwrap_or(true);
+                if stale {
+                    emit_stage(&app_load, &id_load, "transcribe", 0.28, "Loading Whisper model…");
+                    *guard = Some(WhisperEngine::load(&wanted_path)?);
+                }
                 let engine = guard.as_ref().expect("whisper loaded above");
                 engine.transcribe(&samples, move |p| {
-                    emit_stage(&app2, &id2, "transcribe", p, "Transcribing audio…");
+                    emit_stage(&app2, &id2, "transcribe", 0.3 + p * 0.7, "Transcribing audio…");
                 })
             })
             .await??;
@@ -321,6 +365,7 @@ async fn run_stages(
                 text: desc,
                 source: "vision".into(),
                 vector: Vec::new(),
+                cues: Vec::new(),
             });
         }
         Ok::<_, anyhow::Error>(out)
@@ -332,7 +377,7 @@ async fn run_stages(
     let mut chunks = vtt::chunk_cues(&cues, 40.0, 600);
     chunks.extend(vision_chunks);
     if chunks.is_empty() {
-        return Err(anyhow!("nothing to index — the video produced no transcript or descriptions"));
+        return Err(anyhow!("nothing to index: the video produced no transcript or descriptions"));
     }
 
     let engine = state.require_engine()?;

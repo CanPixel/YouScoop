@@ -113,11 +113,17 @@ fn novel_suffix(prev: &str, cur: &str) -> String {
 }
 
 /// Merge cues into ~`window_secs` transcript chunks for embedding.
+/// Consecutive chunks overlap by one cue so sentences (and the claims in
+/// them) aren't cut in half at chunk boundaries.
 pub fn chunk_cues(cues: &[Cue], window_secs: f64, max_chars: usize) -> Vec<Chunk> {
+    use crate::store::SubCue;
+
     let mut chunks: Vec<Chunk> = Vec::new();
     let mut cur_text = String::new();
+    let mut cur_cues: Vec<SubCue> = Vec::new();
     let mut cur_start = 0.0_f64;
     let mut cur_end = 0.0_f64;
+    let mut seed_only = false;
 
     for cue in cues {
         if cur_text.is_empty() {
@@ -127,7 +133,9 @@ pub fn chunk_cues(cues: &[Cue], window_secs: f64, max_chars: usize) -> Vec<Chunk
             cur_text.push(' ');
         }
         cur_text.push_str(&cue.text);
+        cur_cues.push(SubCue { start: cue.start, text: cue.text.clone() });
         cur_end = cue.end.max(cur_start);
+        seed_only = false;
 
         if cur_end - cur_start >= window_secs || cur_text.len() >= max_chars {
             chunks.push(Chunk {
@@ -136,16 +144,24 @@ pub fn chunk_cues(cues: &[Cue], window_secs: f64, max_chars: usize) -> Vec<Chunk
                 text: std::mem::take(&mut cur_text),
                 source: "speech".into(),
                 vector: Vec::new(),
+                cues: std::mem::take(&mut cur_cues),
             });
+            // Seed the next chunk with this cue for a one-cue overlap.
+            cur_text = cue.text.clone();
+            cur_cues = vec![SubCue { start: cue.start, text: cue.text.clone() }];
+            cur_start = cue.start;
+            cur_end = cue.end.max(cue.start);
+            seed_only = true;
         }
     }
-    if !cur_text.trim().is_empty() {
+    if !seed_only && !cur_text.trim().is_empty() {
         chunks.push(Chunk {
             start: cur_start,
             end: cur_end,
             text: cur_text,
             source: "speech".into(),
             vector: Vec::new(),
+            cues: cur_cues,
         });
     }
     chunks

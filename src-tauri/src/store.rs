@@ -41,6 +41,18 @@ pub struct Chunk {
     pub source: String,
     #[serde(default)]
     pub vector: Vec<f32>,
+    /// Fine-grained timestamps of the cues this chunk was merged from, so the
+    /// chat prompt can cite the actual sentence instead of the chunk start.
+    /// Empty on vision chunks and on indexes built before this field existed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cues: Vec<SubCue>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubCue {
+    pub start: f64,
+    pub text: String,
 }
 
 /// Chunk as exposed to the frontend (no embedding vector).

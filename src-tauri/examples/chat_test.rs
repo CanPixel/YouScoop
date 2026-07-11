@@ -1,0 +1,44 @@
+//! Replay a chat question through the real RAG + prompt + generation path.
+//! Usage: cargo run --example chat_test -- <video_dir> "<question>"
+
+use std::sync::atomic::AtomicBool;
+
+use smoltalk_lib::llm::Engine;
+use smoltalk_lib::rag;
+use smoltalk_lib::store::{Chunk, VideoMeta};
+
+fn main() {
+    let mut args = std::env::args().skip(1);
+    let dir = args.next().expect("video dir");
+    let question = args.next().expect("question");
+
+    let home = std::env::var("HOME").unwrap();
+    let base = format!("{home}/Library/Application Support/com.canpixel.smoltalk");
+    let engine = Engine::load(
+        &format!("{base}/models/SmolVLM2-2.2B-Instruct-Q4_K_M.gguf"),
+        &format!("{base}/models/mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf"),
+        &format!("{base}/models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf"),
+        &format!("{base}/models/bge-small-en-v1.5-q8_0.gguf"),
+    )
+    .expect("engine load");
+
+    let meta: VideoMeta =
+        serde_json::from_str(&std::fs::read_to_string(format!("{base}/videos/{dir}/meta.json")).unwrap())
+            .unwrap();
+    let chunks: Vec<Chunk> =
+        serde_json::from_str(&std::fs::read_to_string(format!("{base}/videos/{dir}/index.json")).unwrap())
+            .unwrap();
+
+    let qv = engine.embed_texts(&[question.clone()], true).unwrap().remove(0);
+    let excerpts = rag::retrieve(&chunks, &qv, &question, 6);
+    println!("--- excerpts fed to model ---");
+    for c in &excerpts {
+        println!("[{}] {}: {:.80}…", rag::format_ts(c.start), c.source, c.text.trim());
+    }
+    let prompt = rag::build_chat_prompt(&meta, &excerpts, &[], &question);
+
+    let cancel = AtomicBool::new(false);
+    let answer = engine.chat(&prompt, 512, &cancel, &mut |_| {}).expect("chat");
+    println!("--- answer ---\n{answer}");
+    drop(engine);
+}

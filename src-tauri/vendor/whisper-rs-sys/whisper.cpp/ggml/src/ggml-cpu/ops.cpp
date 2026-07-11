@@ -8586,12 +8586,12 @@ static void ggml_compute_forward_flash_attn_ext_tiled(
         }
 
         // Per-thread scratch layout:
-        // Q_q:    Q_TILE_SZ * DK (converted Q tile — F32 for GEMM, KV type for scalar)
+        // Q_q:    Q_TILE_SZ * DK (converted Q tile: F32 for GEMM, KV type for scalar)
         // KQ:     Q_TILE_SZ * KV_TILE_SZ (attention scores in float)
         // mask:   Q_TILE_SZ * KV_TILE_SZ (mask in float)
         // VKQ32:  Q_TILE_SZ * DV (FP32 output accumulator)
         // V32:    KV_TILE_SZ * DV (F32 buffer for V tile)
-        // K_f32:  KV_TILE_SZ * DK (F32 buffer for K tile — GEMM path)
+        // K_f32:  KV_TILE_SZ * DK (F32 buffer for K tile: GEMM path)
         float * base  = (float *) params->wdata + ith*(Q_TILE_SZ*DK + 2*Q_TILE_SZ*KV_TILE_SZ + Q_TILE_SZ*DV + KV_TILE_SZ*DV + KV_TILE_SZ*DK + CACHE_LINE_SIZE_F32);
 
         void  * Q_q    = base;

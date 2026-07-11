@@ -1,5 +1,6 @@
-//! Local inference engine: SmolVLM2 (vision + chat) and BGE-small (embeddings),
-//! both running through llama.cpp with Metal acceleration.
+//! Local inference engine: SmolVLM2 (frame descriptions), Qwen3 (chat) and
+//! BGE-small (embeddings), all running through llama.cpp with Metal
+//! acceleration.
 
 use std::ffi::CString;
 use std::num::NonZeroU32;
@@ -28,17 +29,26 @@ pub struct Engine {
     // Field order matters: mtmd holds a raw pointer into vlm, so it must drop first.
     mtmd: MtmdContext,
     vlm: LlamaModel,
+    chat_model: LlamaModel,
     embed: LlamaModel,
     backend: LlamaBackend,
 }
 
 impl Engine {
-    pub fn load(vlm_path: &str, mmproj_path: &str, embed_path: &str) -> Result<Self> {
+    pub fn load(
+        vlm_path: &str,
+        mmproj_path: &str,
+        chat_path: &str,
+        embed_path: &str,
+    ) -> Result<Self> {
         let backend = LlamaBackend::init().context("llama backend init failed")?;
 
         let gpu_params = LlamaModelParams::default().with_n_gpu_layers(1_000_000);
         let vlm = LlamaModel::load_from_file(&backend, vlm_path, &gpu_params)
             .context("failed to load SmolVLM2 model")?;
+
+        let chat_model = LlamaModel::load_from_file(&backend, chat_path, &gpu_params)
+            .context("failed to load chat model")?;
 
         let mtmd_params = MtmdContextParams {
             use_gpu: true,
@@ -58,7 +68,7 @@ impl Engine {
         let embed = LlamaModel::load_from_file(&backend, embed_path, &cpu_params)
             .context("failed to load embedding model")?;
 
-        Ok(Self { mtmd, vlm, embed, backend })
+        Ok(Self { mtmd, vlm, chat_model, embed, backend })
     }
 
     /// Describe a single video frame in 1-2 sentences.
@@ -79,7 +89,10 @@ impl Engine {
 
         let prompt = format!(
             "<|im_start|>User: {}Describe this video frame in one or two short sentences. \
-             Mention the subjects, what is happening, any visible text, and the setting.<end_of_utterance>\nAssistant:",
+             Mention the subjects, what is happening, any visible text, and the setting. \
+             Describe only what is actually visible; transcribe on-screen text exactly. \
+             Do not guess names of people, places, or objects, and do not add facts that \
+             are not shown in the image.<end_of_utterance>\nAssistant:",
             mtmd_default_marker()
         );
         let n_past = self.eval_prompt(&mut ctx, &prompt, &[&bitmap])?;
@@ -88,10 +101,11 @@ impl Engine {
             LlamaSampler::penalties(64, 1.15, 0.0, 0.0),
             LlamaSampler::greedy(),
         ]);
-        self.generate(&mut ctx, n_past, 96, sampler, cancel, &mut |_| {})
+        self.generate(&mut ctx, &self.vlm, n_past, 96, sampler, cancel, &mut |_| {})
     }
 
-    /// Text-only chat completion, streaming pieces through `on_token`.
+    /// Text-only chat completion on the dedicated chat model (ChatML prompt),
+    /// streaming pieces through `on_token`.
     pub fn chat(
         &self,
         prompt: &str,
@@ -106,24 +120,33 @@ impl Engine {
             .with_n_threads(n_threads())
             .with_n_threads_batch(n_threads());
         let mut ctx = self
-            .vlm
+            .chat_model
             .new_context(&self.backend, ctx_params)
             .context("chat context")?;
 
-        let n_past = self.eval_prompt(&mut ctx, prompt, &[])?;
+        let tokens = self
+            .chat_model
+            .str_to_token(prompt, AddBos::Never)
+            .map_err(|e| anyhow!("chat tokenize: {e}"))?;
+        let n_batch = ctx.n_batch() as usize;
+        let mut n_past: i32 = 0;
+        for window in tokens.chunks(n_batch) {
+            let mut batch = LlamaBatch::new(window.len(), 1);
+            for (i, &tok) in window.iter().enumerate() {
+                let is_last = n_past as usize + i + 1 == tokens.len();
+                batch.add(tok, n_past + i as i32, &[0], is_last)?;
+            }
+            ctx.decode(&mut batch).context("chat prompt decode failed")?;
+            n_past += window.len() as i32;
+        }
 
-        let seed = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.subsec_nanos())
-            .unwrap_or(42);
+        // Greedy decoding: answers are grounded in retrieved excerpts, and
+        // sampling temperature just adds paraphrase drift.
         let sampler = LlamaSampler::chain_simple([
-            LlamaSampler::penalties(64, 1.1, 0.0, 0.0),
-            LlamaSampler::top_p(0.95, 1),
-            LlamaSampler::min_p(0.05, 1),
-            LlamaSampler::temp(0.4),
-            LlamaSampler::dist(seed),
+            LlamaSampler::penalties(64, 1.05, 0.0, 0.0),
+            LlamaSampler::greedy(),
         ]);
-        self.generate(&mut ctx, n_past, max_tokens, sampler, cancel, on_token)
+        self.generate(&mut ctx, &self.chat_model, n_past, max_tokens, sampler, cancel, on_token)
     }
 
     /// Tokenize (text + optional media) and evaluate the full prompt. Returns n_past.
@@ -152,6 +175,7 @@ impl Engine {
     fn generate(
         &self,
         ctx: &mut LlamaContext,
+        model: &LlamaModel,
         mut n_past: i32,
         max_tokens: usize,
         mut sampler: LlamaSampler,
@@ -168,11 +192,10 @@ impl Engine {
             }
             let token = sampler.sample(ctx, -1);
             sampler.accept(token);
-            if self.vlm.is_eog_token(token) {
+            if model.is_eog_token(token) {
                 break;
             }
-            let bytes = self
-                .vlm
+            let bytes = model
                 .token_to_piece_bytes(token, 64, false, None)
                 .unwrap_or_default();
             pending.extend_from_slice(&bytes);

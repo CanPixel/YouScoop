@@ -2,9 +2,9 @@ pub mod llm;
 mod media;
 mod models;
 mod pipeline;
-mod rag;
+pub mod rag;
 mod state;
-mod store;
+pub mod store;
 pub mod stt;
 mod vtt;
 mod ytdlp;
@@ -94,11 +94,17 @@ async fn load_engine(app: AppHandle, state: State<'_, Arc<AppState>>) -> CmdResu
 
     let vlm = models::model_path(&app, models::spec("vlm").unwrap()).map_err(err_str)?;
     let mmproj = models::model_path(&app, models::spec("mmproj").unwrap()).map_err(err_str)?;
+    let chat = models::model_path(&app, models::spec("chat").unwrap()).map_err(err_str)?;
     let embed = models::model_path(&app, models::spec("embed").unwrap()).map_err(err_str)?;
-    for (p, name) in [(&vlm, "SmolVLM2"), (&mmproj, "vision projector"), (&embed, "embeddings")] {
+    for (p, name) in [
+        (&vlm, "SmolVLM2"),
+        (&mmproj, "vision projector"),
+        (&chat, "chat"),
+        (&embed, "embeddings"),
+    ] {
         if !p.exists() {
             state.engine_loading.store(false, Ordering::SeqCst);
-            let msg = format!("{name} model is missing — download it first.");
+            let msg = format!("{name} model is missing: download it first.");
             let _ = app.emit(
                 "engine-status",
                 &EngineStatus { loaded: false, loading: false, error: Some(msg.clone()) },
@@ -111,6 +117,7 @@ async fn load_engine(app: AppHandle, state: State<'_, Arc<AppState>>) -> CmdResu
         llm::Engine::load(
             &vlm.to_string_lossy(),
             &mmproj.to_string_lossy(),
+            &chat.to_string_lossy(),
             &embed.to_string_lossy(),
         )
     })
@@ -165,7 +172,7 @@ fn add_video(app: AppHandle, state: State<'_, Arc<AppState>>, url: String) -> Cm
         return Err("Paste a YouTube URL first.".into());
     }
     if !state.engine_loaded() {
-        return Err("The AI engine is still loading — try again in a moment.".into());
+        return Err("The AI engine is still loading: try again in a moment.".into());
     }
     let state = state.inner().clone();
     tauri::async_runtime::spawn(pipeline::ingest(app, state, url));
@@ -181,7 +188,7 @@ fn retry_video(app: AppHandle, state: State<'_, Arc<AppState>>, id: String) -> C
         _ => {}
     }
     if !state.engine_loaded() {
-        return Err("The AI engine is still loading — try again in a moment.".into());
+        return Err("The AI engine is still loading: try again in a moment.".into());
     }
     let state = state.inner().clone();
     tauri::async_runtime::spawn(pipeline::ingest(app, state, meta.url));
@@ -265,7 +272,7 @@ async fn ask_video(
             .into_iter()
             .next()
             .ok_or_else(|| anyhow::anyhow!("query embedding failed"))?;
-        let excerpts = rag::retrieve(&chunks, &query_vec, 12);
+        let excerpts = rag::retrieve(&chunks, &query_vec, &q, 6);
         let prompt = rag::build_chat_prompt(&meta, &excerpts, &history, &q);
 
         let mut on_token = |piece: &str| {

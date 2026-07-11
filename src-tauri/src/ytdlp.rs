@@ -25,7 +25,7 @@ struct RawInfo {
     duration: Option<f64>,
 }
 
-/// Locate ffmpeg — GUI apps don't inherit the shell PATH on macOS.
+/// Locate ffmpeg: GUI apps don't inherit the shell PATH on macOS.
 pub fn find_ffmpeg() -> Option<PathBuf> {
     let candidates = [
         "/opt/homebrew/bin/ffmpeg",

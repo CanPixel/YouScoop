@@ -53,7 +53,7 @@ export default function SetupGate({ status, progress, engineError, onRefresh }: 
         <img src={logo} alt="SmolTalk" className="setup-logo" />
         <h1 className="setup-title">Welcome to SmolTalk</h1>
         <p className="setup-sub">
-          Talk to any YouTube video — fully local, fully private. SmolTalk needs a few
+          Talk to any YouTube video. SmolTalk needs a few
           open models on disk before it can watch videos for you. Everything runs on your
           Mac; nothing ever leaves it.
         </p>
@@ -101,7 +101,7 @@ export default function SetupGate({ status, progress, engineError, onRefresh }: 
         </div>
 
         <p className="setup-footnote">
-          One-time download of ~1.8 GB from Hugging Face. Whisper is optional — it's only used
+          One-time download of ~1.8 GB from Hugging Face. Whisper is optional: it's only used
           when a video has no captions.
         </p>
       </div>

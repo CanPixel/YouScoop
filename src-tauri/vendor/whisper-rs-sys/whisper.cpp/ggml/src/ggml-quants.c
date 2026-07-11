@@ -5487,7 +5487,7 @@ bool ggml_validate_row_data(enum ggml_type type, const void * data, size_t nbyte
             } break;
         case GGML_TYPE_NVFP4:
             {
-                // UE4M3 scales are uint8_t — all byte values are valid
+                // UE4M3 scales are uint8_t: all byte values are valid
                 GGML_UNUSED(data);
                 GGML_UNUSED(nb);
             } break;

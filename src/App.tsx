@@ -200,7 +200,8 @@ export default function App() {
 
   const removeVideo = useCallback(
     async (id: string) => {
-      if (!window.confirm("Remove this video and its local index?")) return;
+      // Confirmation is the two-step button in the sidebar: window.confirm()
+      // is a no-op in Tauri's webview (always returns falsy).
       try {
         await api.removeVideo(id);
       } catch (e) {
@@ -328,12 +329,12 @@ export default function App() {
             <p>
               Paste a YouTube link in the sidebar. SmolTalk downloads the video, reads the
               transcript, <em>watches</em> the frames with SmolVLM2, and builds a local semantic
-              index — then you can chat with the video and jump to any cited moment.
+              index. Then you can talk to the video!
             </p>
             <div className="welcome-steps">
               <div><span>1</span> Add a YouTube URL</div>
               <div><span>2</span> Wait for the local indexing pass</div>
-              <div><span>3</span> Ask anything — click timestamps to jump</div>
+              <div><span>3</span> Ask anything, click timestamps to jump</div>
             </div>
             <p className="welcome-privacy">100% on-device · no accounts · no API keys</p>
           </div>

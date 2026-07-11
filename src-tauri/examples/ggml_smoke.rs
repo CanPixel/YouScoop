@@ -10,6 +10,7 @@ fn main() {
     let engine = Engine::load(
         &format!("{dir}/SmolVLM2-2.2B-Instruct-Q4_K_M.gguf"),
         &format!("{dir}/mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf"),
+        &format!("{dir}/Qwen3-4B-Instruct-2507-Q4_K_M.gguf"),
         &format!("{dir}/bge-small-en-v1.5-q8_0.gguf"),
     )
     .expect("engine load");
@@ -24,7 +25,7 @@ fn main() {
     println!("EMBED OK: dim={} norm={:.4}", embs[0].len(), norm);
 
     let whisper = WhisperEngine::load(&format!("{dir}/ggml-base-q5_1.bin")).expect("whisper load");
-    // 2s of a 440 Hz tone at 16 kHz — just exercises the full pipeline.
+    // 2s of a 440 Hz tone at 16 kHz: just exercises the full pipeline.
     let samples: Vec<f32> = (0..32000)
         .map(|i| (2.0 * std::f32::consts::PI * 440.0 * i as f32 / 16000.0).sin() * 0.1)
         .collect();

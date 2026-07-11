@@ -21,6 +21,7 @@ fn main() {
     let engine = Engine::load(
         &format!("{models}/SmolVLM2-2.2B-Instruct-Q4_K_M.gguf"),
         &format!("{models}/mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf"),
+        &format!("{models}/Qwen3-4B-Instruct-2507-Q4_K_M.gguf"),
         &format!("{models}/bge-small-en-v1.5-q8_0.gguf"),
     )
     .expect("engine load");
@@ -31,8 +32,11 @@ fn main() {
         serde_json::from_str(&std::fs::read_to_string(index_path).unwrap()).unwrap();
 
     let qv = engine.embed_texts(&[question.clone()], true).unwrap().remove(0);
-    let mut scored: Vec<(f32, &Chunk)> =
-        chunks.iter().filter(|c| !c.vector.is_empty()).map(|c| (cosine(&c.vector, &qv), c)).collect();
+    let mut scored: Vec<(f32, &Chunk)> = chunks
+        .iter()
+        .filter(|c| !c.vector.is_empty())
+        .map(|c| (cosine(&c.vector, &qv) + smoltalk_lib::rag::lexical_boost(&question, &c.text), c))
+        .collect();
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
 
     println!("query: {question}\ntop 12 retrieved chunks:");

@@ -1,7 +1,7 @@
 [package]
 name = "smoltalk"
 version = "0.1.0"
-description = "SmolTalk — talk to any YouTube video, fully local"
+description = "SmolTalk: talk to any YouTube video, fully private"
 authors = ["Can Ur"]
 edition = "2021"
 

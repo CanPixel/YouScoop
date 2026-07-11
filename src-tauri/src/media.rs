@@ -9,7 +9,7 @@ use crate::ytdlp::find_ffmpeg;
 
 fn ffmpeg_cmd() -> Result<Command> {
     let ffmpeg = find_ffmpeg().ok_or_else(|| {
-        anyhow!("ffmpeg not found — install it with `brew install ffmpeg` and restart SmolTalk")
+        anyhow!("ffmpeg not found: install it with `brew install ffmpeg` and restart SmolTalk")
     })?;
     let mut cmd = Command::new(ffmpeg);
     cmd.arg("-hide_banner").arg("-loglevel").arg("error").arg("-y");
