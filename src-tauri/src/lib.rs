@@ -74,6 +74,11 @@ async fn download_model(app: AppHandle, id: String) -> CmdResult<()> {
     models::download(&app, &id).await.map_err(err_str)
 }
 
+#[tauri::command]
+async fn update_ytdlp(app: AppHandle) -> CmdResult<String> {
+    ytdlp::self_update(&app).await.map_err(err_str)
+}
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct EngineStatus {
@@ -82,20 +87,32 @@ struct EngineStatus {
     error: Option<String>,
 }
 
-#[tauri::command]
-async fn load_engine(app: AppHandle, state: State<'_, Arc<AppState>>) -> CmdResult<()> {
-    if state.engine_loaded() {
-        return Ok(());
+/// Make sure the engine is loaded, starting or waiting for a load as needed.
+/// Callers that need inference (adding videos, asking questions) funnel
+/// through here, so the UI can open before the multi-GB models are resident.
+async fn ensure_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), String> {
+    loop {
+        if state.engine_loaded() {
+            return Ok(());
+        }
+        if state.engine_loading.swap(true, Ordering::SeqCst) {
+            // Another load is in flight; wait for it to settle, then re-check.
+            tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+            continue;
+        }
+        // We own the load now.
+        return do_load_engine(app, state).await;
     }
-    if state.engine_loading.swap(true, Ordering::SeqCst) {
-        return Ok(()); // already loading
-    }
+}
+
+/// Perform the actual engine load. Caller must own `engine_loading` (true).
+async fn do_load_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), String> {
     let _ = app.emit("engine-status", &EngineStatus { loaded: false, loading: true, error: None });
 
-    let vlm = models::model_path(&app, models::spec("vlm").unwrap()).map_err(err_str)?;
-    let mmproj = models::model_path(&app, models::spec("mmproj").unwrap()).map_err(err_str)?;
-    let chat = models::model_path(&app, models::spec("chat").unwrap()).map_err(err_str)?;
-    let embed = models::model_path(&app, models::spec("embed").unwrap()).map_err(err_str)?;
+    let vlm = models::model_path(app, models::spec("vlm").unwrap()).map_err(err_str)?;
+    let mmproj = models::model_path(app, models::spec("mmproj").unwrap()).map_err(err_str)?;
+    let chat = models::model_path(app, models::spec("chat").unwrap()).map_err(err_str)?;
+    let embed = models::model_path(app, models::spec("embed").unwrap()).map_err(err_str)?;
     for (p, name) in [
         (&vlm, "SmolVLM2"),
         (&mmproj, "vision projector"),
@@ -122,17 +139,16 @@ async fn load_engine(app: AppHandle, state: State<'_, Arc<AppState>>) -> CmdResu
         )
     })
     .await
-    .map_err(err_str)?;
+    .map_err(err_str);
 
     state.engine_loading.store(false, Ordering::SeqCst);
-    match result {
+    match result.and_then(|r| r.map_err(err_str)) {
         Ok(engine) => {
             *state.engine.lock().unwrap() = Some(engine);
             let _ = app.emit("engine-status", &EngineStatus { loaded: true, loading: false, error: None });
             Ok(())
         }
-        Err(e) => {
-            let msg = e.to_string();
+        Err(msg) => {
             let _ = app.emit(
                 "engine-status",
                 &EngineStatus { loaded: false, loading: false, error: Some(msg.clone()) },
@@ -140,6 +156,12 @@ async fn load_engine(app: AppHandle, state: State<'_, Arc<AppState>>) -> CmdResu
             Err(msg)
         }
     }
+}
+
+#[tauri::command]
+async fn load_engine(app: AppHandle, state: State<'_, Arc<AppState>>) -> CmdResult<()> {
+    let state = state.inner().clone();
+    ensure_engine(&app, &state).await
 }
 
 // ---------- Library ----------
@@ -165,17 +187,41 @@ fn video_detail(app: AppHandle, id: String) -> CmdResult<VideoDetail> {
     Ok(VideoDetail { meta, chunks })
 }
 
+/// Wait for the engine, then run the given ingest future; engine-load
+/// failures surface as add errors in the UI.
+fn spawn_ingest<F, Fut>(app: AppHandle, state: Arc<AppState>, ingest: F)
+where
+    F: FnOnce(AppHandle, Arc<AppState>) -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = ()> + Send,
+{
+    tauri::async_runtime::spawn(async move {
+        if let Err(e) = ensure_engine(&app, &state).await {
+            pipeline::emit_global_error(&app, e);
+            return;
+        }
+        ingest(app, state).await;
+    });
+}
+
 #[tauri::command]
 fn add_video(app: AppHandle, state: State<'_, Arc<AppState>>, url: String) -> CmdResult<()> {
     let url = url.trim().to_string();
     if url.is_empty() {
         return Err("Paste a YouTube URL first.".into());
     }
-    if !state.engine_loaded() {
-        return Err("The AI engine is still loading: try again in a moment.".into());
+    spawn_ingest(app, state.inner().clone(), move |app, state| pipeline::ingest(app, state, url));
+    Ok(())
+}
+
+#[tauri::command]
+fn add_local_video(app: AppHandle, state: State<'_, Arc<AppState>>, path: String) -> CmdResult<()> {
+    let path = std::path::PathBuf::from(path);
+    if !path.is_file() {
+        return Err("That file doesn't exist.".into());
     }
-    let state = state.inner().clone();
-    tauri::async_runtime::spawn(pipeline::ingest(app, state, url));
+    spawn_ingest(app, state.inner().clone(), move |app, state| {
+        pipeline::ingest_local(app, state, path)
+    });
     Ok(())
 }
 
@@ -187,11 +233,9 @@ fn retry_video(app: AppHandle, state: State<'_, Arc<AppState>>, id: String) -> C
         "ready" => return Err("This video is already in your library.".into()),
         _ => {}
     }
-    if !state.engine_loaded() {
-        return Err("The AI engine is still loading: try again in a moment.".into());
-    }
-    let state = state.inner().clone();
-    tauri::async_runtime::spawn(pipeline::ingest(app, state, meta.url));
+    spawn_ingest(app, state.inner().clone(), move |app, state| {
+        pipeline::resume(app, state, meta)
+    });
     Ok(())
 }
 
@@ -204,7 +248,8 @@ fn cancel_ingest(state: State<'_, Arc<AppState>>, id: String) {
 
 #[tauri::command]
 fn remove_video(app: AppHandle, state: State<'_, Arc<AppState>>, id: String) -> CmdResult<()> {
-    // If it's mid-ingest, cancel first.
+    // If it's mid-ingest, cancel first; the pipeline notices the missing
+    // meta.json and stops writing state back.
     if let Some(flag) = state.cancels.lock().unwrap().get(&id) {
         flag.store(true, Ordering::Relaxed);
     }
@@ -227,11 +272,21 @@ struct ChatToken {
     token: String,
 }
 
+/// One retrieved excerpt behind an answer, for the "sources" UI.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct ChatDone {
-    video_id: String,
+struct SourceRef {
+    start: f64,
+    end: f64,
+    source: String,
+    text: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChatAnswer {
     answer: String,
+    sources: Vec<SourceRef>,
 }
 
 #[tauri::command]
@@ -241,7 +296,7 @@ async fn ask_video(
     video_id: String,
     question: String,
     history: Vec<HistoryTurnDto>,
-) -> CmdResult<String> {
+) -> CmdResult<ChatAnswer> {
     let question = question.trim().to_string();
     if question.is_empty() {
         return Err("Ask something first.".into());
@@ -251,6 +306,8 @@ async fn ask_video(
         return Err("This video hasn't finished processing yet.".into());
     }
     let chunks = store::load_index(&app, &video_id).map_err(err_str)?;
+    let state = state.inner().clone();
+    ensure_engine(&app, &state).await?;
     let engine = state.require_engine().map_err(err_str)?;
 
     state.chat_cancel.store(false, Ordering::Relaxed);
@@ -267,13 +324,35 @@ async fn ask_video(
         let guard = engine.lock().unwrap();
         let engine = guard.as_ref().ok_or_else(|| anyhow::anyhow!("engine not loaded"))?;
 
+        // Follow-ups like "what did he say about it?" embed terribly; let the
+        // chat model rewrite them into a standalone retrieval query first.
+        // The user's original wording still goes into the answer prompt.
+        let retrieval_q = if history.is_empty() {
+            q.clone()
+        } else {
+            let prompt = rag::build_rewrite_prompt(&history, &q);
+            match engine.chat(&prompt, 64, &cancel, &mut |_| {}) {
+                Ok(out) => rag::clean_rewrite(&out, &q).unwrap_or_else(|| q.clone()),
+                Err(_) => q.clone(),
+            }
+        };
+
         let query_vec = engine
-            .embed_texts(&[q.clone()], true)?
+            .embed_texts(std::slice::from_ref(&retrieval_q), true)?
             .into_iter()
             .next()
             .ok_or_else(|| anyhow::anyhow!("query embedding failed"))?;
-        let excerpts = rag::retrieve(&chunks, &query_vec, &q, 6);
+        let excerpts = rag::retrieve(&chunks, &query_vec, &retrieval_q, 6);
         let prompt = rag::build_chat_prompt(&meta, &excerpts, &history, &q);
+        let sources: Vec<SourceRef> = excerpts
+            .iter()
+            .map(|c| SourceRef {
+                start: c.start,
+                end: c.end,
+                source: c.source.clone(),
+                text: c.text.clone(),
+            })
+            .collect();
 
         let mut on_token = |piece: &str| {
             let _ = app2.emit(
@@ -281,13 +360,13 @@ async fn ask_video(
                 &ChatToken { video_id: vid.clone(), token: piece.to_string() },
             );
         };
-        engine.chat(&prompt, 512, &cancel, &mut on_token)
+        let answer = engine.chat(&prompt, 512, &cancel, &mut on_token)?;
+        Ok::<_, anyhow::Error>(ChatAnswer { answer, sources })
     })
     .await
     .map_err(err_str)?
     .map_err(err_str)?;
 
-    let _ = app.emit("chat-done", &ChatDone { video_id, answer: answer.clone() });
     Ok(answer)
 }
 
@@ -305,16 +384,18 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(Arc::new(AppState::new()))
         .setup(|app| {
-            store::cleanup_orphans(&app.handle().clone());
+            store::cleanup_orphans(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             setup_status,
             download_model,
+            update_ytdlp,
             load_engine,
             library,
             video_detail,
             add_video,
+            add_local_video,
             retry_video,
             cancel_ingest,
             remove_video,

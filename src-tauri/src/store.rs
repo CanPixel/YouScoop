@@ -29,6 +29,17 @@ pub struct VideoMeta {
     pub frame_count: usize,
     #[serde(default)]
     pub chunk_count: usize,
+    /// Auto-generated whole-video summary + chapter outline. Grounds global
+    /// questions ("what is this video about?") that retrieval alone can't answer.
+    #[serde(default)]
+    pub summary: Option<String>,
+}
+
+impl VideoMeta {
+    /// Local files are ingested with an empty URL.
+    pub fn is_local(&self) -> bool {
+        self.url.is_empty()
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -77,14 +88,43 @@ pub fn videos_dir(app: &AppHandle) -> Result<PathBuf> {
     Ok(dir)
 }
 
-pub fn video_dir(app: &AppHandle, id: &str) -> Result<PathBuf> {
+fn check_id(id: &str) -> Result<()> {
     // Defend against path traversal via a hostile "id".
     if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
         return Err(anyhow!("invalid video id"));
     }
+    Ok(())
+}
+
+pub fn video_dir(app: &AppHandle, id: &str) -> Result<PathBuf> {
+    check_id(id)?;
     let dir = videos_dir(app)?.join(id);
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
+}
+
+/// The video's directory path without creating it. Lets callers test for
+/// existence without resurrecting a directory that `delete_video` removed.
+pub fn video_dir_path(app: &AppHandle, id: &str) -> Result<PathBuf> {
+    check_id(id)?;
+    Ok(videos_dir(app)?.join(id))
+}
+
+/// Whether the video still exists in the library. False after `delete_video`,
+/// so an in-flight pipeline knows not to write its state back.
+pub fn meta_exists(app: &AppHandle, id: &str) -> bool {
+    video_dir_path(app, id).map(|d| d.join("meta.json").exists()).unwrap_or(false)
+}
+
+/// Save meta only if the video hasn't been removed meanwhile. Used by the
+/// pipeline so a cancelled/failed ingest of a deleted video doesn't recreate
+/// its directory.
+pub fn save_meta_if_present(app: &AppHandle, meta: &VideoMeta) -> Result<bool> {
+    if !meta_exists(app, &meta.id) {
+        return Ok(false);
+    }
+    save_meta(app, meta)?;
+    Ok(true)
 }
 
 pub fn save_meta(app: &AppHandle, meta: &VideoMeta) -> Result<()> {
@@ -94,7 +134,58 @@ pub fn save_meta(app: &AppHandle, meta: &VideoMeta) -> Result<()> {
 }
 
 pub fn load_meta(app: &AppHandle, id: &str) -> Result<VideoMeta> {
-    let path = video_dir(app, id)?.join("meta.json");
+    let path = video_dir_path(app, id)?.join("meta.json");
+    let bytes = std::fs::read(path)?;
+    Ok(serde_json::from_slice(&bytes)?)
+}
+
+// ---- Per-stage pipeline artifacts ----
+//
+// Each stage persists its output so a retry (or an app restart) resumes where
+// it left off instead of re-downloading and re-transcribing everything.
+
+/// Timestamped reference to one extracted keyframe on disk.
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrameRef {
+    pub ts: f64,
+    pub file: String,
+}
+
+pub fn save_cues(app: &AppHandle, id: &str, cues: &[crate::vtt::Cue]) -> Result<()> {
+    let path = video_dir(app, id)?.join("cues.json");
+    std::fs::write(path, serde_json::to_vec(cues)?)?;
+    Ok(())
+}
+
+pub fn load_cues(app: &AppHandle, id: &str) -> Result<Vec<crate::vtt::Cue>> {
+    let path = video_dir_path(app, id)?.join("cues.json");
+    let bytes = std::fs::read(path)?;
+    Ok(serde_json::from_slice(&bytes)?)
+}
+
+pub fn save_frame_manifest(app: &AppHandle, id: &str, frames: &[FrameRef]) -> Result<()> {
+    let path = video_dir(app, id)?.join("frames.json");
+    std::fs::write(path, serde_json::to_vec(frames)?)?;
+    Ok(())
+}
+
+pub fn load_frame_manifest(app: &AppHandle, id: &str) -> Result<Vec<FrameRef>> {
+    let path = video_dir_path(app, id)?.join("frames.json");
+    let bytes = std::fs::read(path)?;
+    Ok(serde_json::from_slice(&bytes)?)
+}
+
+/// Vision chunks (frame descriptions) saved incrementally during the describe
+/// stage, so a cancelled or crashed ingest doesn't lose completed VLM work.
+pub fn save_descriptions(app: &AppHandle, id: &str, chunks: &[Chunk]) -> Result<()> {
+    let path = video_dir(app, id)?.join("descriptions.json");
+    std::fs::write(path, serde_json::to_vec(chunks)?)?;
+    Ok(())
+}
+
+pub fn load_descriptions(app: &AppHandle, id: &str) -> Result<Vec<Chunk>> {
+    let path = video_dir_path(app, id)?.join("descriptions.json");
     let bytes = std::fs::read(path)?;
     Ok(serde_json::from_slice(&bytes)?)
 }
@@ -106,7 +197,7 @@ pub fn save_index(app: &AppHandle, id: &str, chunks: &[Chunk]) -> Result<()> {
 }
 
 pub fn load_index(app: &AppHandle, id: &str) -> Result<Vec<Chunk>> {
-    let path = video_dir(app, id)?.join("index.json");
+    let path = video_dir_path(app, id)?.join("index.json");
     let bytes = std::fs::read(path)?;
     Ok(serde_json::from_slice(&bytes)?)
 }
@@ -124,11 +215,13 @@ pub fn list_videos(app: &AppHandle) -> Result<Vec<VideoMeta>> {
             }
         }
     }
-    out.sort_by(|a, b| b.added_at.cmp(&a.added_at));
+    out.sort_by_key(|m| std::cmp::Reverse(m.added_at));
     Ok(out)
 }
 
-/// Called once at startup: videos left "processing" by a previous session are orphaned.
+/// Called once at startup: videos left "processing" by a previous session are
+/// orphaned, and directories without a meta.json (e.g. an in-flight artifact
+/// write racing a removal) are dead weight.
 pub fn cleanup_orphans(app: &AppHandle) {
     if let Ok(videos) = list_videos(app) {
         for mut meta in videos {
@@ -139,11 +232,21 @@ pub fn cleanup_orphans(app: &AppHandle) {
             }
         }
     }
+    if let Ok(entries) = videos_dir(app).and_then(|d| Ok(std::fs::read_dir(d)?)) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() && !path.join("meta.json").exists() {
+                let _ = std::fs::remove_dir_all(&path);
+            }
+        }
+    }
 }
 
 pub fn delete_video(app: &AppHandle, id: &str) -> Result<()> {
-    let dir = video_dir(app, id)?;
-    std::fs::remove_dir_all(dir)?;
+    let dir = video_dir_path(app, id)?;
+    if dir.exists() {
+        std::fs::remove_dir_all(dir)?;
+    }
     Ok(())
 }
 

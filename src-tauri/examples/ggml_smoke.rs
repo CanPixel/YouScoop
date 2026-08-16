@@ -29,7 +29,8 @@ fn main() {
     let samples: Vec<f32> = (0..32000)
         .map(|i| (2.0 * std::f32::consts::PI * 440.0 * i as f32 / 16000.0).sin() * 0.1)
         .collect();
-    let cues = whisper.transcribe(&samples, |_| {}).expect("transcribe");
+    let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let cues = whisper.transcribe(&samples, cancel, |_| {}).expect("transcribe");
     println!("WHISPER OK: {} cues", cues.len());
 
     // Re-create an embed context after whisper ran, mirroring the pipeline order.

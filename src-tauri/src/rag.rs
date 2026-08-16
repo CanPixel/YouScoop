@@ -69,11 +69,14 @@ pub fn retrieve<'a>(
     let mut selected: Vec<&Chunk> = Vec::new();
     let mut total_chars = 0usize;
     for (_, c) in scored.into_iter().take(top_k * 2) {
-        // Keep the excerpt budget modest: SmolVLM2 2.2B starts cross-attributing
-        // facts between excerpts when the context grows too large. 3600 chars
-        // fits `top_k` full-size (600-char) chunks so ranked chunks aren't
-        // silently dropped.
-        if selected.len() >= top_k || total_chars > 3600 {
+        // Keep the excerpt budget modest: small chat models start
+        // cross-attributing facts between excerpts when the context grows too
+        // large. 3600 chars fits `top_k` full-size (600-char) chunks so ranked
+        // chunks aren't silently dropped. Check before adding so the budget is
+        // a real cap (the first chunk is always taken).
+        if selected.len() >= top_k
+            || (!selected.is_empty() && total_chars + c.text.len() > 3600)
+        {
             break;
         }
         total_chars += c.text.len();
@@ -136,6 +139,17 @@ pub fn build_chat_prompt(
         }
     }
 
+    // A whole-video overview (generated at ingest time) grounds global
+    // questions that six retrieved excerpts can't answer on their own.
+    let overview = match &meta.summary {
+        Some(s) if !s.trim().is_empty() => format!(
+            "\nOverview of the whole video (auto-generated; excerpts below are the \
+             authoritative source for specific facts):\n{}\n",
+            s.trim()
+        ),
+        _ => String::new(),
+    };
+
     // ChatML prompt for the Qwen3 chat model.
     let mut prompt = format!(
         "<|im_start|>system\n\
@@ -144,9 +158,9 @@ You are given indexed excerpts. \"speech\" lines are quotes from the spoken tran
 misspelled by the transcriber. \"visual\" lines are automatic frame descriptions: they may misread details, \
 but text they quote from the screen is usually really shown there. Prefer speech lines for facts; use visual \
 lines for what is shown or written on screen.\n\
-Video: \"{}\" by {} (duration {}).\n\nExcerpts:\n{}\n\n\
+Video: \"{}\" by {} (duration {}).\n{}\nExcerpts:\n{}\n\n\
 Rules:\n\
-- Answer using only the excerpts above. Do not add facts from your own knowledge, and do not silently \
+- Answer using only the excerpts and overview above. Do not add facts from your own knowledge, and do not silently \
 correct names — quote them as the transcript spells them.\n\
 - Cite the timestamp of the specific line a fact comes from in square brackets after each claim, e.g. …the largest star [{}]. Pick the line where the fact is actually said, not a neighboring one.\n\
 - Only combine information from different excerpts when each part keeps its own citation.\n\
@@ -155,6 +169,7 @@ correct names — quote them as the transcript spells them.\n\
         meta.title,
         meta.channel,
         format_ts(meta.duration_secs),
+        overview,
         excerpt_lines.trim_end(),
         format_ts(excerpts.first().map(|c| c.start).unwrap_or(0.0)),
     );
@@ -171,6 +186,115 @@ correct names — quote them as the transcript spells them.\n\
         question.trim()
     ));
     prompt
+}
+
+// ---- Ingest-time summarization ----
+
+/// Digest lines ("[ts] text") for the summary pass. Speech chunks carry the
+/// narrative; vision lines are only used when there is no speech at all
+/// (e.g. a silent screen recording).
+pub fn summary_digest(chunks: &[Chunk]) -> Vec<String> {
+    let speech: Vec<String> = chunks
+        .iter()
+        .filter(|c| c.source == "speech")
+        .map(|c| format!("[{}] {}", format_ts(c.start), c.text.trim()))
+        .collect();
+    if !speech.is_empty() {
+        return speech;
+    }
+    chunks
+        .iter()
+        .filter(|c| c.source == "vision")
+        .map(|c| format!("[{}] (visual) {}", format_ts(c.start), c.text.trim()))
+        .collect()
+}
+
+/// Split digest lines into parts of roughly `max_chars`, aiming for at most
+/// `max_parts` (parts grow past `max_chars` if needed — better a coarse
+/// summary than none).
+pub fn split_digest(lines: &[String], max_chars: usize, max_parts: usize) -> Vec<String> {
+    let total: usize = lines.iter().map(|l| l.len() + 1).sum();
+    let budget = max_chars.max(total.div_ceil(max_parts));
+    let mut parts: Vec<String> = Vec::new();
+    let mut cur = String::new();
+    for line in lines {
+        if !cur.is_empty() && cur.len() + line.len() + 1 > budget {
+            parts.push(std::mem::take(&mut cur));
+        }
+        if !cur.is_empty() {
+            cur.push('\n');
+        }
+        cur.push_str(line);
+    }
+    if !cur.is_empty() {
+        parts.push(cur);
+    }
+    parts
+}
+
+/// Map pass: condense one transcript section into timestamped bullets.
+pub fn build_map_prompt(meta: &VideoMeta, part: &str) -> String {
+    format!(
+        "<|im_start|>system\n\
+You condense sections of video transcripts. Be factual; use only the transcript given.<|im_end|>\n\
+<|im_start|>user\nVideo: \"{}\" by {}. One section of the transcript, with [timestamp] markers:\n\n{}\n\n\
+Write 3-6 short bullet points covering this section's main points, in order. \
+Start each bullet with the [m:ss] timestamp where that point begins (copy it from the transcript).<|im_end|>\n\
+<|im_start|>assistant\n",
+        meta.title, meta.channel, part
+    )
+}
+
+/// Final pass: produce the overview + chapter outline stored in the library.
+/// `material` is either the whole digest (short videos) or the concatenated
+/// map-pass bullets (long ones).
+pub fn build_final_summary_prompt(meta: &VideoMeta, material: &str) -> String {
+    format!(
+        "<|im_start|>system\n\
+You summarize videos from their transcripts. Be factual; use only the material given.<|im_end|>\n\
+<|im_start|>user\nVideo: \"{}\" by {} (duration {}). Timestamped material from the video:\n\n{}\n\n\
+Write exactly this, nothing else:\n\
+1. A 2-3 sentence overview of what the video covers and concludes.\n\
+2. A line \"Chapters:\" followed by 3-8 chapter lines, each formatted as \"[m:ss] Chapter title\" \
+using timestamps copied from the material.<|im_end|>\n\
+<|im_start|>assistant\n",
+        meta.title,
+        meta.channel,
+        format_ts(meta.duration_secs),
+        material
+    )
+}
+
+// ---- Follow-up query rewriting ----
+
+/// Ask the chat model to turn a context-dependent follow-up ("what did he say
+/// about it?") into a standalone retrieval query. The rewritten query is used
+/// only for retrieval; the user's original wording still goes in the prompt.
+pub fn build_rewrite_prompt(history: &[HistoryTurn], question: &str) -> String {
+    let mut convo = String::new();
+    for turn in history.iter().rev().take(2).rev() {
+        convo.push_str(&format!("Q: {}\nA: {}\n", turn.question.trim(), turn.answer.trim()));
+    }
+    format!(
+        "<|im_start|>system\n\
+You rewrite follow-up questions about a video as standalone search queries. \
+Resolve pronouns and references using the conversation. Keep the user's key terms. \
+Output only the rewritten query on a single line — no quotes, no explanation.<|im_end|>\n\
+<|im_start|>user\nConversation so far:\n{}\nFollow-up question: {}\n\nStandalone query:<|im_end|>\n\
+<|im_start|>assistant\n",
+        convo,
+        question.trim()
+    )
+}
+
+/// Clean the model's rewrite output; None means "use the original question".
+pub fn clean_rewrite(raw: &str, original: &str) -> Option<String> {
+    let line = raw.lines().find(|l| !l.trim().is_empty())?.trim();
+    let line = line.trim_matches(|c| c == '"' || c == '\'' || c == '`').trim();
+    if line.is_empty() || line.len() > 200 || line.eq_ignore_ascii_case(original.trim()) {
+        return None;
+    }
+    Some(line.to_string())
 }
 
 #[cfg(test)]
@@ -222,6 +346,60 @@ mod tests {
         chunk.cues.clear();
         let prompt = build_chat_prompt(&meta(), &[&chunk], &[], "q");
         assert!(prompt.contains("[1:30] speech: legacy text."));
+    }
+
+    #[test]
+    fn prompt_includes_overview_when_present() {
+        let chunk = speech_chunk(0.0, 10.0, vec![(0.0, "hello.")]);
+        let mut m = meta();
+        m.summary = Some("An overview.\nChapters:\n[0:00] Start".into());
+        let prompt = build_chat_prompt(&m, &[&chunk], &[], "q");
+        assert!(prompt.contains("An overview."));
+        assert!(prompt.contains("Overview of the whole video"));
+
+        m.summary = None;
+        let prompt = build_chat_prompt(&m, &[&chunk], &[], "q");
+        assert!(!prompt.contains("Overview of the whole video"));
+    }
+
+    #[test]
+    fn retrieve_budget_is_a_hard_cap() {
+        let big_text = "x".repeat(600);
+        let chunks: Vec<Chunk> = (0..10)
+            .map(|i| {
+                let mut c = speech_chunk(i as f64, i as f64 + 1.0, vec![(i as f64, "t")]);
+                c.text = big_text.clone();
+                c.vector = vec![1.0];
+                c
+            })
+            .collect();
+        let selected = retrieve(&chunks, &[1.0], "q", 8);
+        let total: usize = selected.iter().map(|c| c.text.len()).sum();
+        assert!(total <= 3600, "budget overshot: {total}");
+        assert!(!selected.is_empty());
+    }
+
+    #[test]
+    fn split_digest_respects_caps() {
+        let lines: Vec<String> = (0..100).map(|i| format!("[0:{i:02}] line {i} padding")).collect();
+        let parts = split_digest(&lines, 300, 8);
+        assert!(parts.len() <= 8 + 1, "too many parts: {}", parts.len());
+        assert!(parts.len() > 1);
+        // Nothing lost.
+        let joined: usize = parts.iter().map(|p| p.lines().count()).sum();
+        assert_eq!(joined, 100);
+    }
+
+    #[test]
+    fn clean_rewrite_filters_junk() {
+        assert_eq!(
+            clean_rewrite("\"fun virus first appearance\"\n", "what about it?"),
+            Some("fun virus first appearance".into())
+        );
+        assert_eq!(clean_rewrite("   \n\n", "q"), None);
+        assert_eq!(clean_rewrite("what about it?", "what about it?"), None);
+        let long = "x".repeat(300);
+        assert_eq!(clean_rewrite(&long, "q"), None);
     }
 
     #[test]

@@ -1,9 +1,12 @@
 //! WebVTT parsing tuned for YouTube captions (including rolling auto-captions),
 //! plus transcript chunking for the semantic index.
 
+use serde::{Deserialize, Serialize};
+
 use crate::store::Chunk;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Cue {
     pub start: f64,
     pub end: f64,

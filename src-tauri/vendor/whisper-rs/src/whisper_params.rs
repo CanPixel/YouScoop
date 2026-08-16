@@ -642,7 +642,11 @@ impl<'a, 'b> FullParams<'a, 'b> {
                 // Raw pointer
                 let closure = Box::into_raw(closure);
 
-                self.fp.abort_callback = Some(trampoline::<F>);
+                // Fork fix: user_data points at the Box<dyn FnMut() -> bool>,
+                // so the trampoline must be instantiated with that type — not
+                // the caller's closure type F (type confusion / UB). Mirrors
+                // set_progress_callback_safe above.
+                self.fp.abort_callback = Some(trampoline::<Box<dyn FnMut() -> bool>>);
                 self.fp.abort_callback_user_data = closure as *mut c_void;
                 self.abort_callback_safe = None;
             }

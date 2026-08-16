@@ -1,5 +1,8 @@
 //! Local speech-to-text fallback via whisper.cpp (whisper-rs).
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
 use anyhow::{anyhow, Result};
 use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
 
@@ -23,10 +26,12 @@ impl WhisperEngine {
     }
 
     /// Transcribe 16 kHz mono f32 samples into timestamped cues.
-    /// `on_progress` receives 0..=1.
+    /// `on_progress` receives 0..=1. Flipping `cancel` aborts within ~1s
+    /// (checked between whisper's internal encoder/decoder steps).
     pub fn transcribe(
         &self,
         samples: &[f32],
+        cancel: Arc<AtomicBool>,
         mut on_progress: impl FnMut(f32) + Send + 'static,
     ) -> Result<Vec<Cue>> {
         let mut state = self
@@ -49,10 +54,14 @@ impl WhisperEngine {
         params.set_progress_callback_safe(move |p: i32| {
             on_progress((p as f32 / 100.0).clamp(0.0, 1.0));
         });
+        let abort_flag = cancel.clone();
+        params.set_abort_callback_safe(move || abort_flag.load(Ordering::Relaxed));
 
-        state
-            .full(params, samples)
-            .map_err(|e| anyhow!("whisper transcription failed: {e}"))?;
+        let result = state.full(params, samples);
+        if cancel.load(Ordering::Relaxed) {
+            return Err(anyhow!("cancelled"));
+        }
+        result.map_err(|e| anyhow!("whisper transcription failed: {e}"))?;
 
         let n = state.full_n_segments();
         let mut cues = Vec::with_capacity(n as usize);
