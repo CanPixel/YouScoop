@@ -92,22 +92,28 @@ pub struct HistoryTurn {
     pub answer: String,
 }
 
-pub fn build_chat_prompt(
-    meta: &VideoMeta,
-    excerpts: &[&Chunk],
-    history: &[HistoryTurn],
-    question: &str,
-) -> String {
-    let mut excerpt_lines = String::new();
+/// One `[ts] speech:` / `[ts] visual:` line exactly as the prompt shows it.
+pub struct SubLine {
+    pub start: f64,
+    /// "speech" or "visual" — the label used in the prompt.
+    pub label: &'static str,
+    pub text: String,
+}
+
+/// Split retrieved excerpts into the lines the model actually sees. Citation
+/// validation scores against these, so prompt and validator must share one
+/// implementation or a citation could be judged against text nobody showed it.
+pub fn excerpt_sublines(excerpts: &[&Chunk]) -> Vec<SubLine> {
+    let mut out: Vec<SubLine> = Vec::new();
     let mut emitted_cues: std::collections::HashSet<i64> = std::collections::HashSet::new();
     for c in excerpts {
         if c.source == "vision" {
-            excerpt_lines.push_str(&format!("[{}] visual: {}\n", format_ts(c.start), c.text.trim()));
+            out.push(SubLine { start: c.start, label: "visual", text: c.text.trim().to_string() });
             continue;
         }
         if c.cues.is_empty() {
             // Old index without cue-level timestamps.
-            excerpt_lines.push_str(&format!("[{}] speech: {}\n", format_ts(c.start), c.text.trim()));
+            out.push(SubLine { start: c.start, label: "speech", text: c.text.trim().to_string() });
             continue;
         }
         // Render the chunk as ~12s sub-lines so citations land on the actual
@@ -123,7 +129,7 @@ pub fn build_chat_prompt(
             // past ~12s: each line's timestamp must stay close to its content.
             if let Some(start) = line_start {
                 if cue.start - start >= 12.0 || line_text.len() >= 260 {
-                    excerpt_lines.push_str(&format!("[{}] speech: {line_text}\n", format_ts(start)));
+                    out.push(SubLine { start, label: "speech", text: line_text.clone() });
                     line_text.clear();
                     line_start = None;
                 }
@@ -135,8 +141,240 @@ pub fn build_chat_prompt(
             line_text.push_str(cue.text.trim());
         }
         if let (Some(start), false) = (line_start, line_text.is_empty()) {
-            excerpt_lines.push_str(&format!("[{}] speech: {line_text}\n", format_ts(start)));
+            out.push(SubLine { start, label: "speech", text: line_text });
         }
+    }
+    out
+}
+
+// ---------------------------------------------------------------------------
+// Citation validation
+//
+// The chat model reliably retrieves the right content but is unreliable about
+// which excerpt line a fact came from — it tends to reuse the first timestamp
+// in the block. Rather than hope a prompt rule fixes that, re-point each
+// citation after generation by measuring how much the citing sentence actually
+// overlaps each line the model was shown.
+// ---------------------------------------------------------------------------
+
+/// A cited line needs at least this much weighted overlap with the citing
+/// sentence to be considered grounded. Deliberately low — roughly one shared
+/// content word. Anything at or above it is left alone.
+///
+/// This validator is intentionally conservative: it repairs citations with no
+/// lexical grounding at all and leaves everything else untouched. An earlier,
+/// greedier version scored each sentence and re-pointed every citation at the
+/// single best line, which flattened a compound sentence's three correct,
+/// distinct citations into three copies of one timestamp. Destroying good
+/// citations is far worse than leaving a marginal one in place.
+const MIN_SUPPORT: f64 = 0.75;
+
+/// Crude suffix stripping so "production lines" matches "production line" and
+/// "logging" matches "logged". Not a real stemmer — stems are only ever
+/// compared against each other, so consistency beats linguistic correctness.
+fn stem(w: &str) -> &str {
+    for suf in ["ing", "ed", "es", "s"] {
+        if w.len() > suf.len() + 3 && w.ends_with(suf) {
+            return &w[..w.len() - suf.len()];
+        }
+    }
+    w
+}
+
+fn content_stems(text: &str) -> std::collections::HashSet<String> {
+    text.to_lowercase()
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| w.len() >= 3 && !STOPWORDS.contains(w))
+        .map(|w| stem(w).to_string())
+        .collect()
+}
+
+/// Rare words are what actually identify a line: matching "wormhole" says far
+/// more about provenance than matching "system".
+fn idf_table(lines: &[SubLine]) -> std::collections::HashMap<String, f64> {
+    let n = lines.len().max(1) as f64;
+    let mut df: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for l in lines {
+        for w in content_stems(&l.text) {
+            *df.entry(w).or_insert(0) += 1;
+        }
+    }
+    df.into_iter().map(|(w, d)| (w, (1.0 + n / d as f64).ln())).collect()
+}
+
+fn support(
+    sentence: &std::collections::HashSet<String>,
+    line: &SubLine,
+    idf: &std::collections::HashMap<String, f64>,
+) -> f64 {
+    content_stems(&line.text)
+        .intersection(sentence)
+        .map(|w| idf.get(w).copied().unwrap_or(0.0))
+        .sum()
+}
+
+fn is_timestamp(s: &str) -> bool {
+    let seg: Vec<&str> = s.split(':').collect();
+    (2..=3).contains(&seg.len())
+        && seg.iter().enumerate().all(|(i, p)| {
+            !p.is_empty()
+                && p.len() <= 2
+                && p.chars().all(|c| c.is_ascii_digit())
+                && (i == 0 || p.len() == 2)
+        })
+}
+
+/// Byte range of a `[m:ss]` / `[m:ss, m:ss]` citation and the stamps inside it.
+struct Citation {
+    start: usize,
+    end: usize,
+    stamps: Vec<String>,
+}
+
+fn find_citations(text: &str) -> Vec<Citation> {
+    let mut out = Vec::new();
+    let mut open: Option<usize> = None;
+    for (i, ch) in text.char_indices() {
+        match ch {
+            '[' => open = Some(i),
+            ']' => {
+                if let Some(s) = open.take() {
+                    let parts: Vec<&str> = text[s + 1..i].split(',').map(str::trim).collect();
+                    if !parts.is_empty() && parts.iter().all(|p| is_timestamp(p)) {
+                        let stamps = parts.iter().map(|p| p.to_string()).collect();
+                        out.push(Citation { start: s, end: i + 1, stamps });
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
+/// Sentence spans. A '.' only ends a sentence when followed by whitespace and
+/// not preceded by a lone letter, so "e.g." doesn't shred the sentence and cost
+/// us the very words that identify the source line.
+fn sentence_ranges(text: &str) -> Vec<std::ops::Range<usize>> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::new();
+    let mut start = 0usize;
+    for (i, ch) in text.char_indices() {
+        let terminator = match ch {
+            '\n' | '!' | '?' => true,
+            '.' => {
+                let next_is_break = text[i + 1..].chars().next().is_none_or(char::is_whitespace);
+                let lone_initial = i >= 1
+                    && bytes[i - 1].is_ascii_alphanumeric()
+                    && (i < 2 || !bytes[i - 2].is_ascii_alphanumeric());
+                next_is_break && !lone_initial
+            }
+            _ => false,
+        };
+        if terminator {
+            let end = i + ch.len_utf8();
+            if !text[start..end].trim().is_empty() {
+                out.push(start..end);
+            }
+            start = end;
+        }
+    }
+    if !text[start..].trim().is_empty() {
+        out.push(start..text.len());
+    }
+    out
+}
+
+/// Re-point (or remove) each citation in `answer` so it names the excerpt line
+/// that actually supports the sentence citing it.
+pub fn snap_citations(answer: &str, lines: &[SubLine]) -> String {
+    if lines.is_empty() {
+        return answer.to_string();
+    }
+    let idf = idf_table(lines);
+    let citations = find_citations(answer);
+    let mut edits: Vec<(usize, usize, String)> = Vec::new();
+
+    for sent in sentence_ranges(answer) {
+        let in_sentence: Vec<&Citation> =
+            citations.iter().filter(|c| sent.contains(&c.start)).collect();
+        if in_sentence.is_empty() {
+            continue;
+        }
+        // Score against the prose only: timestamps carry no content, and a
+        // neighbouring citation's digits shouldn't sway the match.
+        let mut prose = answer[sent.clone()].to_string();
+        for c in &in_sentence {
+            let (lo, hi) = (c.start - sent.start, c.end - sent.start);
+            prose.replace_range(lo..hi, &" ".repeat(hi - lo));
+        }
+        let words = content_stems(&prose);
+        let scored: Vec<f64> = lines.iter().map(|l| support(&words, l, &idf)).collect();
+
+        // One sentence must never cite the same instant twice, whether the
+        // model repeated itself or two repairs converged on the same line.
+        let mut used: Vec<String> = Vec::new();
+        for cite in in_sentence {
+            let mut kept: Vec<String> = Vec::new();
+            for stamp in &cite.stamps {
+                let grounded = lines
+                    .iter()
+                    .position(|l| format_ts(l.start) == *stamp)
+                    .is_some_and(|i| scored[i] >= MIN_SUPPORT);
+                let resolved = if grounded {
+                    Some(stamp.clone())
+                } else {
+                    // Ungrounded: hand it the best line this sentence hasn't
+                    // already claimed, or drop it if nothing supports it.
+                    lines
+                        .iter()
+                        .zip(&scored)
+                        .filter(|(l, sc)| {
+                            **sc >= MIN_SUPPORT && !used.contains(&format_ts(l.start))
+                        })
+                        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+                        .map(|(l, _)| format_ts(l.start))
+                };
+                match resolved {
+                    Some(r) if !used.contains(&r) => {
+                        used.push(r.clone());
+                        kept.push(r);
+                    }
+                    _ => {}
+                }
+            }
+            let replacement =
+                if kept.is_empty() { String::new() } else { format!("[{}]", kept.join(", ")) };
+            if replacement != answer[cite.start..cite.end] {
+                edits.push((cite.start, cite.end, replacement));
+            }
+        }
+    }
+
+    if edits.is_empty() {
+        return answer.to_string();
+    }
+    edits.sort_by_key(|e| e.0);
+    let mut out = answer.to_string();
+    for (start, end, replacement) in edits.into_iter().rev() {
+        out.replace_range(start..end, &replacement);
+    }
+    // Dropping a citation can strand " ." or a double space.
+    while out.contains("  ") {
+        out = out.replace("  ", " ");
+    }
+    out.replace(" .", ".").replace(" ,", ",").trim().to_string()
+}
+
+pub fn build_chat_prompt(
+    meta: &VideoMeta,
+    excerpts: &[&Chunk],
+    history: &[HistoryTurn],
+    question: &str,
+) -> String {
+    let mut excerpt_lines = String::new();
+    for l in excerpt_sublines(excerpts) {
+        excerpt_lines.push_str(&format!("[{}] {}: {}\n", format_ts(l.start), l.label, l.text));
     }
 
     // A whole-video overview (generated at ingest time) grounds global
@@ -300,6 +538,120 @@ pub fn clean_rewrite(raw: &str, original: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // The real lines from "Now you can build your own Raspberry Pi factory"
+    // that Qwen3 mis-cited as [15:10].
+    fn pi_lines() -> Vec<SubLine> {
+        [
+            (910.8, "this and get it to work correctly with an image. But you can imagine once you do get the bug sorted out and you get a green light at the end of this, being able to do this and pull out a pie, put in a new one,"),
+            (923.5, "clamp it down, and it's flashing automatically. And it's logging all of these pies into a database. So when you're building your product, you can have a little sticker that has the Mac address and have it automatically print out, all that kind of stuff."),
+            (935.4, "You can integrate this into your production line and make Raspberry Pi compute module-based products much quicker. If you someday are in a factory"),
+            (434.0, "for my particular needs, but it does have one of the faster Intel mobile chips right now. Let me get this going. I'm going to download Raspberry Pi Imager. I'm going to plug this device into my network."),
+            (663.6, "I didn't want to go through all that stuff. So I set it up using PiGen and I set up a magic wormhole and I made sure this is connected to Raspberry Pi Connect. So I should just be able to go into screen sharing on here."),
+            (687.5, "right into here. so I'll say wormhole. It looks like it was already installed on here. Wormhole receive. So that should receive this file from my Mac directly onto the CM5 programming jig."),
+        ]
+        .into_iter()
+        .map(|(start, text)| SubLine { start, label: "speech", text: text.to_string() })
+        .collect()
+    }
+
+    #[test]
+    fn snaps_a_citation_onto_the_line_that_supports_it() {
+        let answer = "Additionally, integration with production lines and automated logging \
+                      (e.g., MAC address tracking) enables scalable manufacturing [15:10].";
+        let out = snap_citations(answer, &pi_lines());
+        assert!(!out.contains("[15:10]"), "should not keep the unsupported stamp:\n{out}");
+        assert!(
+            out.contains("[15:23]") || out.contains("[15:35]"),
+            "should snap onto the logging/production-line content:\n{out}"
+        );
+    }
+
+    #[test]
+    fn snaps_a_distinctive_term_to_its_own_line() {
+        // [15:10] shares nothing with this sentence, so it is ungrounded and
+        // gets re-pointed; "magic wormhole" is rare enough to win outright.
+        let answer = "He sets up a magic wormhole to transfer files [15:10].";
+        let out = snap_citations(answer, &pi_lines());
+        assert!(
+            out.contains("[11:03]") || out.contains("[11:27]"),
+            "expected a wormhole line, got:\n{out}"
+        );
+    }
+
+    #[test]
+    fn keeps_distinct_citations_in_a_compound_sentence() {
+        // Regression: an earlier version scored the whole sentence and pointed
+        // every citation at one winner, collapsing three correct, distinct
+        // citations into three copies of the same timestamp.
+        let answer = "You flash an OS to the jig with Raspberry Pi Imager, set up a magic \
+                      wormhole to move the image, and log each Mac address into a database \
+                      [7:14][11:03][15:23].";
+        let out = snap_citations(answer, &pi_lines());
+        assert!(out.contains("[7:14]"), "Imager citation lost:\n{out}");
+        assert!(out.contains("[11:03]"), "wormhole citation lost:\n{out}");
+        assert!(out.contains("[15:23]"), "logging citation lost:\n{out}");
+    }
+
+    #[test]
+    fn never_emits_the_same_stamp_twice_in_one_sentence() {
+        let answer = "It logs every pi into a database with its Mac address [15:10][15:10].";
+        let out = snap_citations(answer, &pi_lines());
+        assert_eq!(out.matches("15:23").count(), 1, "duplicate repair:\n{out}");
+    }
+
+    #[test]
+    fn leaves_a_well_supported_citation_alone() {
+        let answer = "You download Raspberry Pi Imager onto the laptop with the Intel mobile chip [7:14].";
+        let out = snap_citations(answer, &pi_lines());
+        assert_eq!(out, answer);
+    }
+
+    #[test]
+    fn drops_a_citation_nothing_supports() {
+        let answer = "The presenter mentions his favourite pizza toppings [15:10].";
+        let out = snap_citations(answer, &pi_lines());
+        assert!(!out.contains('['), "unsupported citation should go:\n{out}");
+        assert!(out.ends_with("toppings."), "punctuation should tidy up:\n{out}");
+    }
+
+    #[test]
+    fn collapses_a_group_that_resolves_to_one_line() {
+        let answer = "It logs every pi into a database with its Mac address [15:10, 15:23].";
+        let out = snap_citations(answer, &pi_lines());
+        assert_eq!(out.matches("15:23").count(), 1, "should dedupe, got:\n{out}");
+        assert!(!out.contains("15:10"), "should re-point the bad stamp:\n{out}");
+    }
+
+    #[test]
+    fn each_sentence_is_scored_independently() {
+        let answer = "You download Raspberry Pi Imager onto the laptop with the Intel mobile chip \
+                      [7:14]. It logs every pi into a database with its Mac address [7:14].";
+        let out = snap_citations(answer, &pi_lines());
+        let (first, second) = out.split_once(". ").expect("two sentences");
+        assert!(first.contains("[7:14]"), "first should stay:\n{out}");
+        assert!(second.contains("[15:23]"), "second should snap:\n{out}");
+    }
+
+    #[test]
+    fn abbreviations_do_not_split_the_sentence() {
+        let r = sentence_ranges("Uses e.g. Docker here. Then more.");
+        assert_eq!(r.len(), 2, "e.g. must not end a sentence: {r:?}");
+    }
+
+    #[test]
+    fn non_timestamps_in_brackets_are_left_alone() {
+        let answer = "See [note] and [99] and [abc] here [15:10].";
+        let out = snap_citations(answer, &pi_lines());
+        assert!(out.contains("[note]") && out.contains("[99]") && out.contains("[abc]"));
+    }
+
+    #[test]
+    fn empty_excerpts_are_a_no_op() {
+        let answer = "Nothing to check here [1:23].";
+        assert_eq!(snap_citations(answer, &[]), answer);
+    }
+
     use crate::store::SubCue;
 
     fn speech_chunk(start: f64, end: f64, cues: Vec<(f64, &str)>) -> Chunk {

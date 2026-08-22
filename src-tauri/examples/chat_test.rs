@@ -39,6 +39,9 @@ fn main() {
 
     let cancel = AtomicBool::new(false);
     let answer = engine.chat(&prompt, 512, &cancel, &mut |_| {}).expect("chat");
-    println!("--- answer ---\n{answer}");
+    println!("--- raw answer ---\n{answer}");
+    // Mirror ask_video so the harness shows what the UI will actually render.
+    let snapped = rag::snap_citations(&answer, &rag::excerpt_sublines(&excerpts));
+    println!("--- after citation snapping ---\n{snapped}");
     drop(engine);
 }

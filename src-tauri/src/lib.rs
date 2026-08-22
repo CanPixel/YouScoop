@@ -387,6 +387,11 @@ async fn ask_video(
             );
         };
         let answer = engine.chat(&prompt, 512, &cancel, &mut on_token)?;
+        // The model streams its own citations, which it routinely points at the
+        // wrong excerpt line. Re-point them against the lines it was actually
+        // shown before returning; the frontend replaces the streamed text with
+        // this corrected answer when the request resolves.
+        let answer = rag::snap_citations(&answer, &rag::excerpt_sublines(&excerpts));
         Ok::<_, anyhow::Error>(ChatAnswer { answer, sources })
     })
     .await

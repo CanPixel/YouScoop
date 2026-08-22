@@ -300,10 +300,19 @@ pub async fn fetch_captions(app: &AppHandle, url: &str, work_dir: &Path) -> Resu
     take_best_vtt(work_dir)
 }
 
+/// YouTube's ASR tracks tag every cue with this; human-written tracks don't.
+/// It is the only reliable way to tell them apart — the language tag isn't:
+/// on many videos the auto track is plain "en" while the human one is "en-US".
+const YT_AUTO_MARKER: &str = "align:start position:";
+
 /// Read the best `subs.*.vtt` yt-dlp wrote into `work_dir`, removing all of
 /// them afterwards. Returns `None` when it produced no subtitle track.
+///
+/// A human-written track always beats an auto-generated one: it is punctuated,
+/// free of filler, and its cues are whole phrases, so excerpt lines begin at
+/// sentence boundaries instead of mid-clause — which is what citations point at.
 fn take_best_vtt(work_dir: &Path) -> Result<Option<String>> {
-    let mut produced: Vec<PathBuf> = std::fs::read_dir(work_dir)?
+    let produced: Vec<PathBuf> = std::fs::read_dir(work_dir)?
         .flatten()
         .map(|e| e.path())
         .filter(|p| {
@@ -311,22 +320,22 @@ fn take_best_vtt(work_dir: &Path) -> Result<Option<String>> {
             name.starts_with("subs.") && name.ends_with(".vtt")
         })
         .collect();
-    // Plain "en" is the manual track when there is one; "en-orig" is the
-    // original-language auto track. Both beat a machine-translated variant.
-    // read_dir order is arbitrary, so rank rather than taking the first hit.
-    produced.sort_by_key(|p| {
-        let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-        match name.as_str() {
-            "subs.en.vtt" => (0, name),
-            "subs.en-orig.vtt" => (1, name),
-            _ => (2, name),
-        }
-    });
 
-    let content = match produced.first() {
-        Some(best) => Some(std::fs::read_to_string(best)?),
-        None => None,
-    };
+    let mut ranked: Vec<(bool, u8, String, String)> = Vec::new();
+    for path in &produced {
+        let Ok(content) = std::fs::read_to_string(path) else { continue };
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        // Language preference only breaks ties within a quality tier.
+        let lang_rank = match name.as_str() {
+            "subs.en.vtt" => 0,
+            "subs.en-orig.vtt" => 1,
+            _ => 2,
+        };
+        ranked.push((content.contains(YT_AUTO_MARKER), lang_rank, name, content));
+    }
+    ranked.sort_by(|a, b| (a.0, a.1, &a.2).cmp(&(b.0, b.1, &b.2)));
+
+    let content = ranked.into_iter().next().map(|(_, _, _, c)| c);
     // Clean up every variant, not just the one we read — leftovers would be
     // picked up by the next pass over this directory.
     for p in &produced {
@@ -344,6 +353,37 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    /// The case that motivated ranking by content: on this video YouTube's ASR
+    /// track is plain "en" and the human one is "en-US", so filename order
+    /// alone picks the rolling auto-captions.
+    #[test]
+    fn prefers_a_human_track_over_youtube_asr_whatever_the_language_tag() {
+        let dir = scratch("human-vs-asr");
+        std::fs::write(
+            dir.join("subs.en.vtt"),
+            "WEBVTT\nKind: captions\n\n00:00:01.000 --> 00:00:02.000 align:start position:0%\nrolling auto text\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("subs.en-US.vtt"),
+            "WEBVTT\nKind: captions\n\n00:00:01.000 --> 00:00:03.400\nA clean human sentence.\n",
+        )
+        .unwrap();
+        let got = take_best_vtt(&dir).unwrap().unwrap();
+        assert!(got.contains("clean human sentence"), "picked the ASR track:\n{got}");
+    }
+
+    #[test]
+    fn falls_back_to_asr_when_that_is_all_there_is() {
+        let dir = scratch("asr-only");
+        std::fs::write(
+            dir.join("subs.en.vtt"),
+            "WEBVTT\n\n00:00:01.000 --> 00:00:02.000 align:start position:0%\nauto only\n",
+        )
+        .unwrap();
+        assert!(take_best_vtt(&dir).unwrap().unwrap().contains("auto only"));
     }
 
     #[test]

@@ -37,20 +37,43 @@ export default function MessageBody({ text, onSeek }: Props) {
   );
 }
 
-const INLINE_RE = /(\[\d{1,2}:\d{2}(?::\d{2})?\]|\*\*[^*]+\*\*|`[^`]+`)/g;
+const TS = String.raw`\d{1,2}:\d{2}(?::\d{2})?`;
+// The model cites either one timestamp or a comma-separated run of them
+// ("[4:52, 5:18, 9:00]"), and both should come out as chips. Every alternative
+// stays non-capturing: String.split() emits each capture group it sees, so an
+// extra group here would leak fragments into the output.
+const INLINE_RE = new RegExp(
+  `(\\[\\s*${TS}(?:\\s*,\\s*${TS})*\\s*\\]|\\*\\*[^*]+\\*\\*|\`[^\`]+\`)`,
+  "g",
+);
+const TS_GROUP_RE = new RegExp(`^\\[\\s*(${TS}(?:\\s*,\\s*${TS})*)\\s*\\]$`);
 
 function renderInline(text: string, onSeek: (secs: number) => void): React.ReactNode[] {
   const parts = text.split(INLINE_RE);
   return parts.map((part, i) => {
     if (!part) return null;
-    const tsMatch = part.match(/^\[(\d{1,2}:\d{2}(?::\d{2})?)\]$/);
+    const tsMatch = part.match(TS_GROUP_RE);
     if (tsMatch) {
-      const secs = parseTs(tsMatch[1]);
-      if (secs !== null) {
+      const stamps = tsMatch[1].split(",").map((t) => t.trim());
+      const chips = stamps
+        .map((label) => ({ label, secs: parseTs(label) }))
+        .filter((c): c is { label: string; secs: number } => c.secs !== null);
+      // Fall back to the raw text rather than dropping a citation we can't
+      // fully parse — a half-rendered list would be worse than plain text.
+      if (chips.length === stamps.length && chips.length > 0) {
         return (
-          <button key={i} className="ts-chip" onClick={() => onSeek(secs)} title={`Jump to ${tsMatch[1]}`}>
-            {tsMatch[1]}
-          </button>
+          <React.Fragment key={i}>
+            {chips.map((c) => (
+              <button
+                key={c.label}
+                className="ts-chip"
+                onClick={() => onSeek(c.secs)}
+                title={`Jump to ${c.label}`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </React.Fragment>
         );
       }
       return part;
