@@ -14,7 +14,7 @@ fn main() {
         &format!("{dir}/bge-small-en-v1.5-q8_0.gguf"),
     )
     .expect("engine load");
-
+ 
     let embs = engine
         .embed_texts(&["hello world".to_string(), "a cat on a mat".to_string()], false)
         .expect("embed_texts");
