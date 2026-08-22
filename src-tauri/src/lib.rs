@@ -289,6 +289,32 @@ struct ChatAnswer {
     sources: Vec<SourceRef>,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The frontend reads `answer` off this payload. Nothing in the type system
+    /// spans the IPC boundary, so a rename here silently hands the UI an object
+    /// where it expects a string — which blanks the window rather than erroring.
+    #[test]
+    fn chat_answer_keeps_its_wire_shape() {
+        let payload = ChatAnswer {
+            answer: "hello".into(),
+            sources: vec![SourceRef {
+                start: 1.0,
+                end: 2.0,
+                source: "speech".into(),
+                text: "hi".into(),
+            }],
+        };
+        let json = serde_json::to_value(&payload).unwrap();
+        assert_eq!(json["answer"], "hello");
+        assert!(json["sources"].is_array());
+        assert_eq!(json["sources"][0]["start"], 1.0);
+        assert_eq!(json["sources"][0]["source"], "speech");
+    }
+}
+
 #[tauri::command]
 async fn ask_video(
     app: AppHandle,

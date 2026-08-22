@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  ChatAnswer,
   ChatDone,
   ChatToken,
   EngineStatus,
@@ -14,6 +15,7 @@ import type {
 export const api = {
   setupStatus: () => invoke<SetupStatus>("setup_status"),
   downloadModel: (id: string) => invoke<void>("download_model", { id }),
+  updateYtdlp: () => invoke<string>("update_ytdlp"),
   loadEngine: () => invoke<void>("load_engine"),
   library: () => invoke<VideoMeta[]>("library"),
   videoDetail: (id: string) => invoke<VideoDetail>("video_detail", { id }),
@@ -22,7 +24,7 @@ export const api = {
   cancelIngest: (id: string) => invoke<void>("cancel_ingest", { id }),
   removeVideo: (id: string) => invoke<void>("remove_video", { id }),
   askVideo: (videoId: string, question: string, history: { question: string; answer: string }[]) =>
-    invoke<string>("ask_video", { videoId, question, history }),
+    invoke<ChatAnswer>("ask_video", { videoId, question, history }),
   stopChat: () => invoke<void>("stop_chat"),
 };
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import logo from "../assets/logo.png";
 import { formatDuration } from "../lib/format";
+import UpdateDownloaderButton, { STALE_HINT } from "./UpdateDownloaderButton";
 import type { IngestProgress, VideoMeta } from "../types";
 
 interface Props {
@@ -28,12 +29,16 @@ export default function Sidebar({
   onRemove,
 }: Props) {
   const [url, setUrl] = useState("");
+  // Kept so a stale-downloader failure can re-run the same URL after updating;
+  // the input itself is cleared on submit.
+  const [lastUrl, setLastUrl] = useState("");
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = url.trim();
     if (!trimmed) return;
     onAdd(trimmed);
+    setLastUrl(trimmed);
     setUrl("");
   };
 
@@ -60,7 +65,14 @@ export default function Sidebar({
           {addingUrl ? <span className="spinner spinner-sm" /> : "Add"}
         </button>
       </form>
-      {addError && <div className="add-error">{addError}</div>}
+      {addError && (
+        <div className="add-error">
+          <div>{addError}</div>
+          {addError.includes(STALE_HINT) && lastUrl && (
+            <UpdateDownloaderButton onUpdated={() => onAdd(lastUrl)} />
+          )}
+        </div>
+      )}
 
       <div className="sidebar-section">Library</div>
       <nav className="video-list">

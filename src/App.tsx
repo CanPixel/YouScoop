@@ -234,7 +234,10 @@ export default function App() {
       setGeneratingFor(videoId);
 
       try {
-        const answer = await api.askVideo(videoId, question, history.slice(-2));
+        // `ask_video` resolves with { answer, sources } — assigning the whole
+        // struct to `text` is what used to blank the window when a stream
+        // finished, since MessageBody then called .split on an object.
+        const { answer } = await api.askVideo(videoId, question, history.slice(-2));
         setChats((prev) => {
           const list = prev[videoId] ?? [];
           const updated = list.map((m) =>

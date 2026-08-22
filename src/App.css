@@ -391,6 +391,10 @@ body {
   margin: 4px 16px 0;
   color: var(--danger);
   font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .sidebar-section {
@@ -851,6 +855,23 @@ body {
 .ingest-fail-row .btn {
   flex-shrink: 0;
 }
+.ingest-fail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.update-downloader {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.update-downloader-note {
+  color: var(--danger);
+  font-size: 11.5px;
+}
 
 /* ---------- chat pane ---------- */
 
@@ -1112,4 +1133,46 @@ body {
   display: grid;
   place-items: center;
   flex-shrink: 0;
+}
+
+/* ---------- crash screen ---------- */
+
+.crash-screen {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: var(--bg);
+  overflow-y: auto;
+}
+.crash-card {
+  width: min(760px, 100%);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 36px;
+  box-shadow: var(--shadow);
+}
+.crash-card h1 {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.crash-sub {
+  color: var(--text-dim);
+  margin: 8px 0 18px;
+}
+.crash-trace {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  max-height: 320px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #ffb4b4;
+  user-select: text;
 }

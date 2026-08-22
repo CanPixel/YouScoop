@@ -286,33 +286,101 @@ pub async fn fetch_captions(app: &AppHandle, url: &str, work_dir: &Path) -> Resu
     }
     args.extend(base_args(url));
 
-    let output = ytdlp(app)?
+    // Ignore the exit status. `--sub-langs en.*` routinely matches redundant
+    // variants (en-en-US alongside en), and one of them 429ing fails the whole
+    // run even though the track we want is already written. Judge by what
+    // landed on disk instead, or we throw away good captions and pay for a
+    // Whisper pass we don't need.
+    let _output = ytdlp(app)?
         .args(args)
         .output()
         .await
         .map_err(|e| anyhow!("failed to run yt-dlp: {e}"))?;
 
-    if !output.status.success() {
-        // Captions are best-effort; treat failure as "no captions".
-        return Ok(None);
+    take_best_vtt(work_dir)
+}
+
+/// Read the best `subs.*.vtt` yt-dlp wrote into `work_dir`, removing all of
+/// them afterwards. Returns `None` when it produced no subtitle track.
+fn take_best_vtt(work_dir: &Path) -> Result<Option<String>> {
+    let mut produced: Vec<PathBuf> = std::fs::read_dir(work_dir)?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| {
+            let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            name.starts_with("subs.") && name.ends_with(".vtt")
+        })
+        .collect();
+    // Plain "en" is the manual track when there is one; "en-orig" is the
+    // original-language auto track. Both beat a machine-translated variant.
+    // read_dir order is arbitrary, so rank rather than taking the first hit.
+    produced.sort_by_key(|p| {
+        let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        match name.as_str() {
+            "subs.en.vtt" => (0, name),
+            "subs.en-orig.vtt" => (1, name),
+            _ => (2, name),
+        }
+    });
+
+    let content = match produced.first() {
+        Some(best) => Some(std::fs::read_to_string(best)?),
+        None => None,
+    };
+    // Clean up every variant, not just the one we read — leftovers would be
+    // picked up by the next pass over this directory.
+    for p in &produced {
+        let _ = std::fs::remove_file(p);
+    }
+    Ok(content)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("smoltalk-vtt-{name}"));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
     }
 
-    // Find any subs.*.vtt file produced.
-    let mut vtt_path: Option<PathBuf> = None;
-    for entry in std::fs::read_dir(work_dir)?.flatten() {
-        let p = entry.path();
-        let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-        if name.starts_with("subs.") && name.ends_with(".vtt") {
-            vtt_path = Some(p);
-            break;
+    #[test]
+    fn prefers_manual_en_over_variants_and_cleans_up() {
+        let dir = scratch("prefers");
+        for (name, body) in [
+            ("subs.en-US.vtt", "translated"),
+            ("subs.en-orig.vtt", "auto original"),
+            ("subs.en.vtt", "manual"),
+        ] {
+            std::fs::write(dir.join(name), body).unwrap();
         }
+        assert_eq!(take_best_vtt(&dir).unwrap().as_deref(), Some("manual"));
+        // Every variant is gone, so a later pass can't pick up a stale file.
+        assert!(std::fs::read_dir(&dir).unwrap().next().is_none());
     }
-    match vtt_path {
-        Some(p) => {
-            let content = std::fs::read_to_string(&p)?;
-            let _ = std::fs::remove_file(&p);
-            Ok(Some(content))
-        }
-        None => Ok(None),
+
+    #[test]
+    fn falls_back_to_orig_then_any() {
+        let dir = scratch("fallback");
+        std::fs::write(dir.join("subs.en-US.vtt"), "translated").unwrap();
+        std::fs::write(dir.join("subs.en-orig.vtt"), "auto original").unwrap();
+        assert_eq!(take_best_vtt(&dir).unwrap().as_deref(), Some("auto original"));
+
+        let dir = scratch("fallback-any");
+        std::fs::write(dir.join("subs.en-US.vtt"), "translated").unwrap();
+        assert_eq!(take_best_vtt(&dir).unwrap().as_deref(), Some("translated"));
+    }
+
+    #[test]
+    fn ignores_unrelated_files_and_reports_no_captions() {
+        let dir = scratch("none");
+        // The video itself lives in the same work dir; it must survive.
+        std::fs::write(dir.join("video.mp4"), "binary").unwrap();
+        std::fs::write(dir.join("subs.en.srt"), "wrong format").unwrap();
+        assert_eq!(take_best_vtt(&dir).unwrap(), None);
+        assert!(dir.join("video.mp4").exists());
+        assert!(dir.join("subs.en.srt").exists());
     }
 }

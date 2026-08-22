@@ -26,6 +26,19 @@ export interface VideoDetail {
   chunks: ChunkPublic[];
 }
 
+export interface SourceRef {
+  start: number;
+  end: number;
+  source: "speech" | "vision";
+  text: string;
+}
+
+/** Payload of the `ask_video` command (Rust `ChatAnswer`). */
+export interface ChatAnswer {
+  answer: string;
+  sources: SourceRef[];
+}
+
 export interface ModelStatus {
   id: string;
   label: string;

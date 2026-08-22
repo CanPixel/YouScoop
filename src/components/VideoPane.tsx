@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { formatTs } from "../lib/format";
+import UpdateDownloaderButton, { STALE_HINT } from "./UpdateDownloaderButton";
 import type { ChunkPublic, IngestProgress, VideoMeta } from "../types";
 
 export interface VideoPaneHandle {
@@ -40,7 +41,6 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
-
   useImperativeHandle(ref, () => ({
     seekTo: (secs: number) => {
       const el = videoRef.current;
@@ -172,9 +172,14 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
             <span>
               <strong>Processing failed.</strong> {meta.error ?? "Unknown error."}
             </span>
-            <button className="btn btn-ghost btn-sm" onClick={onRetry}>
-              ↻ Retry
-            </button>
+            <span className="ingest-fail-actions">
+              {meta.error?.includes(STALE_HINT) && (
+                <UpdateDownloaderButton onUpdated={onRetry} />
+              )}
+              <button className="btn btn-ghost btn-sm" onClick={onRetry}>
+                ↻ Retry
+              </button>
+            </span>
           </div>
         </div>
       )}
