@@ -2,12 +2,12 @@
   <img src="branding/smoltalk-icon-1024.png" width="128" alt="SmolTalk icon" />
 </p>
 
-<h1 align="center">SmolTalk</h1>
+<h1 align="center">YouScoop</h1>
 <p align="center"><em>Talk to any YouTube video in full privacy.</em></p>
 
 ---
 
-SmolTalk is a macOS desktop app that downloads a YouTube video, reads its transcript, *watches* its frames with a vision-language model, and builds a local semantic index. Then you can talk to the video! Answers cite clickable timestamps that seek the player to the exact moment.
+YouScoop is a macOS desktop app that downloads a YouTube video, reads its transcript, *watches* its frames with a vision-language model, and builds a local semantic index. Then you can talk to the video! Answers cite clickable timestamps that seek the player to the exact moment.
 
 Everything runs on-device (Apple Silicon / Metal). No accounts, no API keys, no cloud calls after the one-time model download.
 
