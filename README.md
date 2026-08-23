@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="branding/smoltalk-icon-1024.png" width="128" alt="SmolTalk icon" />
+  <img src="branding/smoltalk-icon-1024.png" width="128" alt="YouScoop icon" />
 </p>
 
 <h1 align="center">YouScoop</h1>
@@ -23,7 +23,7 @@ Everything runs on-device (Apple Silicon / Metal). No accounts, no API keys, no 
 
 ## Models
 
-Downloaded once from Hugging Face into `~/Library/Application Support/com.canpixel.smoltalk/models/` (~4.3 GB total):
+Downloaded once from Hugging Face into `~/Library/Application Support/com.canpixel.youscoop/models/` (~4.3 GB total):
 
 | Role | Model | Size |
 |---|---|---|
@@ -61,7 +61,7 @@ cargo run --example chat_test -- <video_id> "your question"   # full prompt + ge
 cargo run --example ggml_smoke                                # load all models, embed, transcribe
 ```
 
-`<video_id>` is a directory name under `~/Library/Application Support/com.canpixel.smoltalk/videos/`.
+`<video_id>` is a directory name under `~/Library/Application Support/com.canpixel.youscoop/videos/`.
 
 ## Architecture notes
 
