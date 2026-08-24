@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="branding/smoltalk-icon-1024.png" width="128" alt="YouScoop icon" />
+  <img src="branding/youscoop-icon-1024.png" width="128" alt="YouScoop icon" />
 </p>
 
 <h1 align="center">YouScoop</h1>

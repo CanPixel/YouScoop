@@ -47,7 +47,7 @@ export default function Sidebar({
       <div className="sidebar-header">
         <img src={logo} alt="" className="sidebar-logo" />
         <div>
-          <div className="sidebar-title">SmolTalk</div>
+          <div className="sidebar-title">YouScoop</div>
           <div className="sidebar-tagline">Talk to your videos</div>
         </div>
       </div>

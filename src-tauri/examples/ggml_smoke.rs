@@ -2,8 +2,8 @@
 //! abort in llama_context::sched_reserve (fused-GDN scan misreading GELU nodes).
 //! Run with: cargo run --example ggml_smoke
 
-use smoltalk_lib::llm::Engine;
-use smoltalk_lib::stt::WhisperEngine;
+use youscoop_lib::llm::Engine;
+use youscoop_lib::stt::WhisperEngine;
 
 fn main() {
     let dir = dirs_path();
@@ -45,5 +45,5 @@ fn main() {
 
 fn dirs_path() -> String {
     let home = std::env::var("HOME").unwrap();
-    format!("{home}/Library/Application Support/com.canpixel.smoltalk/models")
+    format!("{home}/Library/Application Support/com.canpixel.youscoop/models")
 }

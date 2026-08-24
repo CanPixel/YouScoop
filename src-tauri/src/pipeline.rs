@@ -114,7 +114,7 @@ pub async fn ingest(app: AppHandle, state: Arc<AppState>, url: String) {
         emit_global_error(
             &app,
             format!(
-                "\"{}\" is {} long — SmolTalk caps videos at 1:30:00 to keep local processing reasonable.",
+                "\"{}\" is {} long — YouScoop caps videos at 1:30:00 to keep local processing reasonable.",
                 info.title,
                 rag::format_ts(info.duration_secs),
             ),
@@ -175,7 +175,7 @@ pub async fn ingest_local(app: AppHandle, state: Arc<AppState>, path: PathBuf) {
         emit_global_error(
             &app,
             format!(
-                "\"{}\" is {} long — SmolTalk caps videos at 1:30:00 to keep local processing reasonable.",
+                "\"{}\" is {} long — YouScoop caps videos at 1:30:00 to keep local processing reasonable.",
                 file_name,
                 rag::format_ts(duration),
             ),

@@ -3,9 +3,9 @@
 
 use std::sync::atomic::AtomicBool;
 
-use smoltalk_lib::llm::Engine;
-use smoltalk_lib::rag;
-use smoltalk_lib::store::{Chunk, VideoMeta};
+use youscoop_lib::llm::Engine;
+use youscoop_lib::rag;
+use youscoop_lib::store::{Chunk, VideoMeta};
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -13,7 +13,7 @@ fn main() {
     let question = args.next().expect("question");
 
     let home = std::env::var("HOME").unwrap();
-    let base = format!("{home}/Library/Application Support/com.canpixel.smoltalk");
+    let base = format!("{home}/Library/Application Support/com.canpixel.youscoop");
     let engine = Engine::load(
         &format!("{base}/models/SmolVLM2-2.2B-Instruct-Q4_K_M.gguf"),
         &format!("{base}/models/mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf"),

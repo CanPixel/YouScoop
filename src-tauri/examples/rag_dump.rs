@@ -1,7 +1,7 @@
 //! Dump what retrieval actually feeds the chat prompt for a given query.
 //! Usage: cargo run --example rag_dump -- <video_dir> "<question>"
 
-use smoltalk_lib::llm::{cosine, Engine};
+use youscoop_lib::llm::{cosine, Engine};
 
 #[derive(serde::Deserialize)]
 struct Chunk {
@@ -17,7 +17,7 @@ fn main() {
     let question = args.next().expect("question");
 
     let home = std::env::var("HOME").unwrap();
-    let models = format!("{home}/Library/Application Support/com.canpixel.smoltalk/models");
+    let models = format!("{home}/Library/Application Support/com.canpixel.youscoop/models");
     let engine = Engine::load(
         &format!("{models}/SmolVLM2-2.2B-Instruct-Q4_K_M.gguf"),
         &format!("{models}/mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf"),
@@ -27,7 +27,7 @@ fn main() {
     .expect("engine load");
 
     let index_path =
-        format!("{home}/Library/Application Support/com.canpixel.smoltalk/videos/{dir}/index.json");
+        format!("{home}/Library/Application Support/com.canpixel.youscoop/videos/{dir}/index.json");
     let chunks: Vec<Chunk> =
         serde_json::from_str(&std::fs::read_to_string(index_path).unwrap()).unwrap();
 
@@ -35,7 +35,7 @@ fn main() {
     let mut scored: Vec<(f32, &Chunk)> = chunks
         .iter()
         .filter(|c| !c.vector.is_empty())
-        .map(|c| (cosine(&c.vector, &qv) + smoltalk_lib::rag::lexical_boost(&question, &c.text), c))
+        .map(|c| (cosine(&c.vector, &qv) + youscoop_lib::rag::lexical_boost(&question, &c.text), c))
         .collect();
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
 

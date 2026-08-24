@@ -32,7 +32,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
     return (
       <div className="crash-screen">
         <div className="crash-card">
-          <h1>SmolTalk hit an error</h1>
+          <h1>YouScoop hit an error</h1>
           <p className="crash-sub">
             The interface stopped rather than showing a blank window. Your library is on disk and
             is unaffected — reloading is safe.

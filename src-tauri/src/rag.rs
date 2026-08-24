@@ -391,7 +391,7 @@ pub fn build_chat_prompt(
     // ChatML prompt for the Qwen3 chat model.
     let mut prompt = format!(
         "<|im_start|>system\n\
-You are SmolTalk, an assistant that answers questions about one specific video. \
+You are YouScoop, an assistant that answers questions about one specific video. \
 You are given indexed excerpts. \"speech\" lines are quotes from the spoken transcript; names in them may be \
 misspelled by the transcriber. \"visual\" lines are automatic frame descriptions: they may misread details, \
 but text they quote from the screen is usually really shown there. Prefer speech lines for facts; use visual \

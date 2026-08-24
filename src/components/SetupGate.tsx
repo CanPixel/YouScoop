@@ -50,17 +50,17 @@ export default function SetupGate({ status, progress, engineError, onRefresh }: 
   return (
     <div className="setup-gate">
       <div className="setup-card">
-        <img src={logo} alt="SmolTalk" className="setup-logo" />
-        <h1 className="setup-title">Welcome to SmolTalk</h1>
+        <img src={logo} alt="YouScoop" className="setup-logo" />
+        <h1 className="setup-title">Welcome to YouScoop</h1>
         <p className="setup-sub">
-          Talk to any YouTube video. SmolTalk needs a few
+          Talk to any YouTube video. YouScoop needs a few
           open models on disk before it can watch videos for you. Everything runs on your
           Mac; nothing ever leaves it.
         </p>
 
         {!status.ffmpegOk && (
           <div className="setup-warning">
-            <strong>ffmpeg not found.</strong> SmolTalk needs it to read video and audio. Install it
+            <strong>ffmpeg not found.</strong> YouScoop needs it to read video and audio. Install it
             with <code>brew install ffmpeg</code>, then restart the app.
           </div>
         )}

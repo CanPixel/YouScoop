@@ -16,7 +16,7 @@ import type {
 } from "./types";
 
 const REQUIRED_MODELS = ["vlm", "mmproj", "embed"];
-const CHATS_KEY = "smoltalk-chats-v1";
+const CHATS_KEY = "youscoop-chats-v1";
 
 function loadChats(): Record<string, ChatMessage[]> {
   try {
@@ -328,9 +328,9 @@ export default function App() {
         <main className="workspace welcome">
           <div className="welcome-card">
             <img src={logo} alt="" className="welcome-logo" />
-            <h1>SmolTalk</h1>
+            <h1>YouScoop</h1>
             <p>
-              Paste a YouTube link in the sidebar. SmolTalk downloads the video, reads the
+              Paste a YouTube link in the sidebar. YouScoop downloads the video, reads the
               transcript, <em>watches</em> the frames with SmolVLM2, and builds a local semantic
               index. Then you can talk to the video!
             </p>
