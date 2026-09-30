@@ -176,6 +176,7 @@ fn library(app: AppHandle) -> CmdResult<Vec<VideoMeta>> {
 struct VideoDetail {
     meta: VideoMeta,
     chunks: Vec<ChunkPublic>,
+    transcript: Vec<vtt::Cue>,
 }
 
 #[tauri::command]
@@ -184,7 +185,8 @@ fn video_detail(app: AppHandle, id: String) -> CmdResult<VideoDetail> {
     let chunks = store::load_index(&app, &id)
         .map(|cs| cs.iter().map(ChunkPublic::from).collect())
         .unwrap_or_default();
-    Ok(VideoDetail { meta, chunks })
+    let transcript = store::load_cues(&app, &id).unwrap_or_default();
+    Ok(VideoDetail { meta, chunks, transcript })
 }
 
 /// Wait for the engine, then run the given ingest future; engine-load

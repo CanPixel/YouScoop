@@ -1176,3 +1176,17 @@ body {
   color: #ffb4b4;
   user-select: text;
 }
+
+/* Timestamped source inspection */
+.transcript-panel { margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-raised); overflow: hidden; flex-shrink: 0; }
+.transcript-header { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.transcript-header > span { color: var(--text-faint); }
+.transcript-scroll { position: relative; height: 220px; overflow-y: auto; overscroll-behavior: contain; padding: 6px; }
+.transcript-row { display: flex; gap: 12px; width: 100%; padding: 9px 8px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--text-dim); font: inherit; font-size: 12px; line-height: 1.6; text-align: left; cursor: pointer; }
+.transcript-row:hover { background: rgba(124, 92, 255, 0.06); }
+.transcript-row.active { background: rgba(124, 92, 255, 0.12); border-color: var(--border-strong); color: var(--text); }
+.transcript-row:focus-visible { outline: 2px solid var(--speech); outline-offset: -2px; }
+.transcript-time { min-width: 48px; font-variant-numeric: tabular-nums; color: var(--speech); }
+.transcript-row.vision .transcript-time, .transcript-row.vision .transcript-label { color: var(--vision); }
+.transcript-content { display: flex; flex-direction: column; white-space: pre-wrap; overflow-wrap: anywhere; }
+.transcript-label { color: var(--text-faint); font-size: 10px; font-weight: 600; }

@@ -21,9 +21,16 @@ export interface ChunkPublic {
   source: "speech" | "vision";
 }
 
+export interface TranscriptCue {
+  start: number;
+  end: number;
+  text: string;
+}
+
 export interface VideoDetail {
   meta: VideoMeta;
   chunks: ChunkPublic[];
+  transcript: TranscriptCue[];
 }
 
 export interface SourceRef {

@@ -1,9 +1,9 @@
-import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState, useEffect } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { formatTs } from "../lib/format";
 import UpdateDownloaderButton, { STALE_HINT } from "./UpdateDownloaderButton";
-import type { ChunkPublic, IngestProgress, VideoMeta } from "../types";
+import type { ChunkPublic, IngestProgress, TranscriptCue, VideoMeta } from "../types";
 
 export interface VideoPaneHandle {
   seekTo: (secs: number) => void;
@@ -12,6 +12,7 @@ export interface VideoPaneHandle {
 interface Props {
   meta: VideoMeta;
   chunks: ChunkPublic[];
+  transcript: TranscriptCue[];
   ingest?: IngestProgress;
   onCancelIngest: () => void;
   onRetry: () => void;
@@ -37,18 +38,50 @@ const STAGE_ALIAS: Record<string, string> = {
 };
 
 const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
-  { meta, chunks, ingest, onCancelIngest, onRetry },
+  { meta, chunks, transcript, ingest, onCancelIngest, onRetry },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  useImperativeHandle(ref, () => ({
-    seekTo: (secs: number) => {
-      const el = videoRef.current;
-      if (!el) return;
+  const pendingSeekSource = useRef<ChunkPublic["source"] | undefined>(undefined);
+  const transcriptRef = useRef<HTMLDivElement>(null);
+  const [activeRow, setActiveRow] = useState<number | null>(null);
+  const entries = useMemo(() => {
+    const speech: ChunkPublic[] = transcript.length
+      ? transcript.map((cue) => ({ ...cue, source: "speech" }))
+      : chunks.filter((chunk) => chunk.source === "speech");
+    return [...speech, ...chunks.filter((chunk) => chunk.source === "vision")]
+      .sort((a, b) => a.start - b.start);
+  }, [chunks, transcript]);
+
+  useEffect(() => {
+    setActiveRow(null);
+    if (transcriptRef.current) transcriptRef.current.scrollTop = 0;
+  }, [meta.id]);
+
+  function showMoment(secs: number, source?: ChunkPublic["source"]) {
+    let index = -1;
+    for (let i = 0; i < entries.length; i++) {
+      if (entries[i].start <= secs && (!source || entries[i].source === source)) index = i;
+    }
+    if (index < 0) index = entries.findIndex((entry) => !source || entry.source === source);
+    setActiveRow(index < 0 ? null : index);
+    const container = transcriptRef.current;
+    const row = container?.querySelector<HTMLElement>(`[data-row="${index}"]`);
+    if (container && row) {
+      container.scrollTo({ top: row.offsetTop - container.offsetTop - container.clientHeight / 3, behavior: "smooth" });
+    }
+  }
+
+  function seekTo(secs: number, source?: ChunkPublic["source"]) {
+    pendingSeekSource.current = source;
+    showMoment(secs, source);
+    const el = videoRef.current;
+    if (el) {
       el.currentTime = Math.max(0, secs);
       void el.play().catch(() => {});
-    },
-  }));
+    }
+  }
+  useImperativeHandle(ref, () => ({ seekTo }));
 
   const processing = meta.status === "processing" || meta.status === "pending";
   const currentStage = ingest ? STAGE_ALIAS[ingest.stage] ?? null : null;
@@ -75,6 +108,10 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
             src={convertFileSrc(meta.videoPath)}
             controls
             preload="metadata"
+            onSeeked={(event) => {
+              showMoment(event.currentTarget.currentTime, pendingSeekSource.current);
+              pendingSeekSource.current = undefined;
+            }}
             poster={meta.thumbPath ? convertFileSrc(meta.thumbPath) : undefined}
           />
         ) : (
@@ -93,13 +130,8 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
                 className={`timeline-marker ${m.source}`}
                 style={{ left: `${m.left}%` }}
                 title={`[${formatTs(m.start)}] ${m.preview}`}
-                onClick={() => {
-                  const el = videoRef.current;
-                  if (el) {
-                    el.currentTime = m.start;
-                    void el.play().catch(() => {});
-                  }
-                }}
+                aria-label={`${m.source === "vision" ? "Visual description" : "Speech"} at ${formatTs(m.start)}`}
+                onClick={() => seekTo(m.start, m.source)}
               />
             ))}
           </div>
@@ -132,6 +164,32 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
           </button>
         )}
       </div>
+
+      {entries.length > 0 && (
+        <section className="transcript-panel" aria-label="Transcript and visual descriptions">
+          <div className="transcript-header">
+            <strong>Transcript & visuals</strong>
+            <span>Speech and SmolVLM2 output</span>
+          </div>
+          <div className="transcript-scroll" ref={transcriptRef}>
+            {entries.map((entry, index) => (
+              <button
+                key={`${meta.id}-${index}`}
+                data-row={index}
+                className={`transcript-row ${entry.source}${activeRow === index ? " active" : ""}`}
+                aria-current={activeRow === index ? "true" : undefined}
+                onClick={() => seekTo(entry.start, entry.source)}
+              >
+                <span className="transcript-time">{formatTs(entry.start)}</span>
+                <span className="transcript-content">
+                  <span className="transcript-label">{entry.source === "vision" ? "SmolVLM2 · visual" : "Speech"}</span>
+                  <span>{entry.text}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {processing && (
         <div className="ingest-panel">

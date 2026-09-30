@@ -9,6 +9,7 @@ import ChatPane from "./components/ChatPane";
 import type {
   ChatMessage,
   ChunkPublic,
+  TranscriptCue,
   IngestProgress,
   ModelProgress,
   SetupStatus,
@@ -36,6 +37,7 @@ export default function App() {
 
   const [videos, setVideos] = useState<VideoMeta[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [transcripts, setTranscripts] = useState<Record<string, TranscriptCue[]>>({});
   const [chunks, setChunks] = useState<Record<string, ChunkPublic[]>>({});
   const [ingest, setIngest] = useState<Record<string, IngestProgress>>({});
 
@@ -69,6 +71,7 @@ export default function App() {
   const fetchDetail = useCallback(async (id: string) => {
     try {
       const detail = await api.videoDetail(id);
+      setTranscripts((prev) => ({ ...prev, [id]: detail.transcript }));
       setChunks((prev) => ({ ...prev, [id]: detail.chunks }));
       setVideos((prev) => prev.map((v) => (v.id === id ? detail.meta : v)));
     } catch (e) {
@@ -311,6 +314,7 @@ export default function App() {
             ref={videoPaneRef}
             meta={selected}
             chunks={chunks[selected.id] ?? []}
+            transcript={transcripts[selected.id] ?? []}
             ingest={ingest[selected.id]}
             onCancelIngest={() => void api.cancelIngest(selected.id)}
             onRetry={() => retryVideo(selected.id)}
