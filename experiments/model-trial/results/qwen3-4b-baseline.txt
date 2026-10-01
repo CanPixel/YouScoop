@@ -1,0 +1,86 @@
+
+
+Loading model... 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b11146-7fe450e19
+model      : /Users/canur/Library/Application Support/com.canpixel.youscoop/models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+using custom system prompt
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+
+> SOURCE CAPTIONS:
+[330.40s] likely. It seems like there is
+[332.56s] ritualistic torture, sacrifice, and even
+[335.04s] consumption of human flesh going on. But
+[337.60s] a very interesting aspect of this that
+[339.92s] many people probably miss is the fact
+[342.40s] that he says the vampires ball is coming
+[345.12s] to an end. If you know anything about
+[347.52s] what it is that I do on this channel, it
+[349.68s] is discuss the spiritual aons that we
+[352.64s] are currently in. And one of the
+[3 ... (truncated)
+Certainly. Below is a reconstructed analysis of the speaker’s argument in the provided excerpt, structured to clearly separate:
+
+1. **What is said** (direct statements from the speaker),  
+2. **What would require documentary verification** (claims that depend on external evidence),  
+3. **The interpretive leap** (inferences, associations, or speculative connections not directly supported by the evidence),  
+
+with all content preserved in accordance with the supplied timestamps and original phrasing, including uncertain spellings (e.g., "hobgoblins," "ball," "Moolok," "Ball").
+
+---
+
+### 🔹 1. What is said (direct statements, verbatim or closely paraphrased)
+
+- At **[330.40s]**: "It seems like there is ritualistic torture, sacrifice, and even consumption of human flesh going on."  
+- At **[332.56s]**: "It seems like there is ritualistic torture, sacrifice, and even consumption of human flesh going on. But a very interesting aspect of this that many people probably miss is the fact..."  
+- At **[339.92s]**: "many people probably miss is the fact that he says the vampires ball is coming to an end."  
+- At **[342.40s]**: "he says the vampires ball is coming to an end."  
+- At **[345.12s]**: "If you know anything about what it is that I do on this channel, it is discuss the spiritual aons that we are currently in."  
+- At **[352.64s]**: "one of the spiritual aons that we are entering comes with the end of the age of Moolok and the age of Ball..."  
+- At **[358.32s]**: "comes with the end of the age of Moolok and the age of Ball, which is essentially the end of a faction of individuals who are secretly ruling everything that are participating in sacrifice to basically ancient Canaanite deities named Ball. Some people call it Moolok."  
+- At **[379.28s]**: "Yeah, it it's looking likely now. years ago, this stuff seemed far-fetched. If you would have said this 20 years ago, you would be called a crazy person. Now, you might just be called in denial..."  
+- At **[390.96s]**: "this document from the files has Jeffrey Epstein depositing money into an account that he has named Ball."  
+- At **[396.56s]**: "Obviously, it could be some sort of sick, twisted, weird joke maybe, but at the same time, this is very alarming and very strange..."  
+- At **[411.28s]**: "I don't have bank accounts with the names of ancient deities that are basically worshiped via child sacrifice."  
+- At **[418.72s]**: "Now, in this video, he is stating that Jeffrey Epstein did not have a bank account named Ball."  
+- At **[420.80s]**: "Jeffrey Epstein did not have a bank account named Ball."  
+- At **[422.72s]**: "His reasoning is very strange and I disprove what he says..."  
+- At **[425.52s]**: "I disprove what he says, but I want to nip this in the bud cuz I know somebody's going to comment this and I just I don't even want to deal with trying to respond."  
+- At **[436.00s]**: ">> Jeffrey Epstein did not have a bank account named Ball."  
+- At **[438.64s]**: ">> Yes, he did. This premise is hobgoblins."  
+- At **[441.52s]**: "And also, yes."  
+- At **[443.44s]**: ">> Wait, what?"  
+- At **[445.44s]**: "When you hobgoblins, that's weird. I didn't notice that the first time I watched it."  
+- At **[447.76s]**: "Interesting choice of vernacular, sir."  
+- At **[452.16s]**: "So basically the only time an account is labeled ball is the time that I said it was as he says right here."  
+- At **[455.04s]**: "So why would it say bow name? Well for that I had to actually go to AI to get a suggestion of what the was going on cuz I couldn't figure it out."  
+- At **[463.52s]**: "I couldn't figure it out. And really I remember them but I don't really know about them. I've never I don't know if..."
+
+---
+
+### 🔹 2. What would require documentary verification
+
+- At **[390.96s]**: The claim that "a document from the files has Jeffrey Epstein depositing
+
+[ Prompt: 1505.9 t/s | Generation: 80.8 t/s ]
+
+
+Exiting...

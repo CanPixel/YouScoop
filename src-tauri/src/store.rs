@@ -192,7 +192,10 @@ pub fn load_descriptions(app: &AppHandle, id: &str) -> Result<Vec<Chunk>> {
 
 pub fn save_index(app: &AppHandle, id: &str, chunks: &[Chunk]) -> Result<()> {
     let path = video_dir(app, id)?.join("index.json");
-    std::fs::write(path, serde_json::to_vec(chunks)?)?;
+    let temp = path.with_extension("json.part");
+    std::fs::write(&temp, serde_json::to_vec(chunks)?)?;
+    std::fs::File::open(&temp)?.sync_all()?;
+    std::fs::rename(temp, path)?;
     Ok(())
 }
 

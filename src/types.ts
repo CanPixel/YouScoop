@@ -18,7 +18,7 @@ export interface ChunkPublic {
   start: number;
   end: number;
   text: string;
-  source: "speech" | "vision";
+  source: "speech" | "vision" | "audiovisual" | "audiovisual_reviewed";
 }
 
 export interface TranscriptCue {
@@ -31,12 +31,29 @@ export interface VideoDetail {
   meta: VideoMeta;
   chunks: ChunkPublic[];
   transcript: TranscriptCue[];
+  moments: OmniMoment[];
+}
+
+export interface OmniMoment {
+  start: number; end: number; text: string; question: string;
+  model: string; generatedAt: number; elapsedSeconds: number;
+  truncated: boolean;
+}
+export interface WorkerConfig { python: string; omniModel: string; gemmaModel: string }
+export interface WorkerStatus { config: WorkerConfig; runtimeReady: boolean; uvAvailable: boolean; cachedOmni: string | null; cachedGemma: string | null; omniReady: boolean; gemmaReady: boolean }
+
+export interface SavedSource {
+  sourceId: string;
+  packagePath: string;
+  archivePath: string;
+  evidenceCount: number;
+  artifactCount: number;
 }
 
 export interface SourceRef {
   start: number;
   end: number;
-  source: "speech" | "vision";
+  source: "speech" | "vision" | "audiovisual" | "audiovisual_reviewed";
   text: string;
 }
 

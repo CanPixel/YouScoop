@@ -1,0 +1,16 @@
+{
+  "model": "out/model-trial/hf/hub/models--Qwen--Qwen2.5-Omni-3B/snapshots/f75b40e3da2003cdd6e1829b1f420ca70797c34e",
+  "runtime": "transformers-mps-fp16",
+  "video": "out/model-trial/evidence-390-400-original.mp4",
+  "audio_in_video": false,
+  "question": "Transcribe ONLY the spoken words in this audio verbatim. Do not summarize, describe visuals, or add commentary. Mark words you cannot hear clearly as [unclear].",
+  "speech_output": false,
+  "load_seconds": 6.40131750004366,
+  "processing_and_generation_seconds": 4.230787875130773,
+  "input_tokens": 305,
+  "output_tokens": 35,
+  "answer": "In denial because this document from the files has Jeffrey Epstein depositing money into an account that he has named Ball. Now, obviously it could be some [unclear].",
+  "mps_allocated_gb": 9.469784832,
+  "mps_driver_gb": 9.787162624,
+  "process_peak_rss_gb": 15.311863808
+}

@@ -1,0 +1,13 @@
+{
+  "clipStart": 452.0,
+  "case": "problem clip with prior invented account number",
+  "moment": {
+    "kind": "moment",
+    "start": 452.0,
+    "end": 462.0,
+    "answer": "The visible evidence shows a person sitting at a desk with a laptop, microphone, and a can of soda. The text on the screen reads: 'Date: July 27, 2009 Re: The C.O.U.O. Foundation A/C #'. The speech is about an account being labeled 'ball' and the speaker's explanation for why it might say 'ball name'.",
+    "inputTokens": 1587,
+    "elapsedSeconds": 5.358933749841526,
+    "truncated": false
+  }
+}

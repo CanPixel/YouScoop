@@ -10,6 +10,10 @@ import type {
   SetupStatus,
   VideoDetail,
   VideoMeta,
+  SavedSource,
+  WorkerStatus,
+  WorkerConfig,
+  OmniMoment,
 } from "./types";
 
 export const api = {
@@ -19,6 +23,7 @@ export const api = {
   loadEngine: () => invoke<void>("load_engine"),
   library: () => invoke<VideoMeta[]>("library"),
   videoDetail: (id: string) => invoke<VideoDetail>("video_detail", { id }),
+  saveToArchive: (id: string) => invoke<SavedSource>("save_to_archive", { id }),
   addVideo: (url: string) => invoke<void>("add_video", { url }),
   retryVideo: (id: string) => invoke<void>("retry_video", { id }),
   cancelIngest: (id: string) => invoke<void>("cancel_ingest", { id }),
@@ -26,9 +31,25 @@ export const api = {
   askVideo: (videoId: string, question: string, history: { question: string; answer: string }[]) =>
     invoke<ChatAnswer>("ask_video", { videoId, question, history }),
   stopChat: () => invoke<void>("stop_chat"),
+  workerStatus: () => invoke<WorkerStatus>("worker_status"),
+  configureWorker: (config: WorkerConfig) => invoke<void>("configure_worker", { config }),
+  setupDesktopRuntime: () => invoke<WorkerStatus>("setup_desktop_runtime"),
+  installDesktopModel: (model: "omni" | "gemma", source: string | null) => invoke<WorkerStatus>("install_desktop_model", { model, source }),
+  inspectMoment: (videoId: string, start: number, question: string) => invoke<OmniMoment>("inspect_moment", { videoId, start, question }),
+  inspectSource: (videoId: string) => invoke<OmniMoment[]>("inspect_source", { videoId }),
+  reviewMoment: (videoId: string, start: number, end: number, text: string) => invoke<void>("review_moment", { videoId, start, end, text }),
+  removeReviewMoment: (videoId: string, start: number, end: number) => invoke<void>("remove_review_moment", { videoId, start, end }),
+  askGemma: (videoId: string, question: string, history: {question: string; answer: string}[]) => invoke<ChatAnswer>("ask_gemma", { videoId, question, history }),
+  stopWorker: () => invoke<void>("stop_worker"),
 };
 
 export const events = {
+  onRuntimeProgress: (cb: (p: { kind: string; detail?: string; received?: number; total?: number }) => void): Promise<UnlistenFn> =>
+    listen<{ kind: string; detail?: string; received?: number; total?: number }>("runtime-progress", (e) => cb(e.payload)),
+  onInferenceStatus: (cb: (status: string) => void): Promise<UnlistenFn> =>
+    listen<string>("inference-status", (e) => cb(e.payload)),
+  onWorkerProgress: (cb: (p: { kind: string; detail?: string }) => void): Promise<UnlistenFn> =>
+    listen<{ kind: string; detail?: string }>("worker-progress", (e) => cb(e.payload)),
   onModelProgress: (cb: (p: ModelProgress) => void): Promise<UnlistenFn> =>
     listen<ModelProgress>("model-progress", (e) => cb(e.payload)),
   onEngineStatus: (cb: (p: EngineStatus) => void): Promise<UnlistenFn> =>

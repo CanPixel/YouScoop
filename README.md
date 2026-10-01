@@ -11,6 +11,8 @@ YouScoop is a macOS desktop app that downloads a YouTube video, reads its transc
 
 Everything runs on-device (Apple Silicon / Metal). No accounts, no API keys, no cloud calls after the one-time model download.
 
+The overhaul adds a separate **SACRiNOMiCON** desktop/mobile archive. YouScoop owns video playback and processing; the archive owns Oracle conversation, Library, and concept exploration. See [running the two apps](docs/RUNNING.md) for the current workflow, [model decision](docs/MODEL-DECISION.md) for the Gemini fact check, and [verification status](docs/VERIFICATION.md) for demonstrated behavior and remaining work. The model table below describes the original small-model pipeline; the optional desktop workers additionally use native Omni on PyTorch MPS and Gemma on MLX.
+
 ## Features
 
 - **Paste a URL, get a conversation** - ingestion is a staged pipeline with live progress: download → transcript → keyframes → vision pass → semantic index.
@@ -32,7 +34,7 @@ Downloaded once from Hugging Face into `~/Library/Application Support/com.canpix
 | Embeddings | bge-small-en-v1.5 Q8_0 (CPU) | ~35 MB |
 | Transcription fallback | Whisper large-v3-turbo Q5_0 (on demand) | ~570 MB |
 
-All inference goes through `llama.cpp` (via `llama-cpp-2`, Metal + mtmd) and `whisper.cpp` (via a vendored `whisper-rs` fork - see below).
+The original small-model pipeline uses `llama.cpp` (via `llama-cpp-2`, Metal + mtmd) and `whisper.cpp` (via a vendored `whisper-rs` fork - see below). Optional Omni inspection uses PyTorch MPS, and Gemma chat uses MLX.
 
 ## Requirements
 

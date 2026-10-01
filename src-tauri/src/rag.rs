@@ -61,7 +61,7 @@ pub fn retrieve<'a>(
     let terms = query_terms(question);
     let mut scored: Vec<(f32, &Chunk)> = chunks
         .iter()
-        .filter(|c| !c.vector.is_empty())
+        .filter(|c| c.source != "audiovisual" && !c.vector.is_empty())
         .map(|c| (cosine(&c.vector, query_vec) + boost_for(&terms, &c.text), c))
         .collect();
     scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
@@ -107,8 +107,9 @@ pub fn excerpt_sublines(excerpts: &[&Chunk]) -> Vec<SubLine> {
     let mut out: Vec<SubLine> = Vec::new();
     let mut emitted_cues: std::collections::HashSet<i64> = std::collections::HashSet::new();
     for c in excerpts {
-        if c.source == "vision" {
-            out.push(SubLine { start: c.start, label: "visual", text: c.text.trim().to_string() });
+        if c.source == "audiovisual" { continue; }
+        if c.source == "vision" || c.source == "audiovisual_reviewed" {
+            out.push(SubLine { start: c.start, label: if c.source == "vision" { "visual" } else { "reviewed audiovisual observation" }, text: c.text.trim().to_string() });
             continue;
         }
         if c.cues.is_empty() {
@@ -394,8 +395,8 @@ pub fn build_chat_prompt(
 You are YouScoop, an assistant that answers questions about one specific video. \
 You are given indexed excerpts. \"speech\" lines are quotes from the spoken transcript; names in them may be \
 misspelled by the transcriber. \"visual\" lines are automatic frame descriptions: they may misread details, \
-but text they quote from the screen is usually really shown there. Prefer speech lines for facts; use visual \
-lines for what is shown or written on screen.\n\
+and quoted screen text can also be wrong. Reviewed audiovisual observations are human notes, not independent verification. Raw Omni output is excluded from this prompt. \
+Attribute statements to the speaker and separate visible observations from interpretation.\n\
 Video: \"{}\" by {} (duration {}).\n{}\nExcerpts:\n{}\n\n\
 Rules:\n\
 - Answer using only the excerpts and overview above. Do not add facts from your own knowledge, and do not silently \
@@ -729,6 +730,22 @@ mod tests {
         let total: usize = selected.iter().map(|c| c.text.len()).sum();
         assert!(total <= 3600, "budget overshot: {total}");
         assert!(!selected.is_empty());
+    }
+
+    #[test]
+    fn fabricated_raw_omni_text_cannot_enter_chat_retrieval() {
+        let mut raw = speech_chunk(10.0, 20.0, vec![]);
+        raw.source = "audiovisual".into();
+        raw.text = "Invented account number 123-456-7890".into();
+        raw.vector = vec![1.0];
+        let mut reviewed = speech_chunk(10.0, 20.0, vec![]);
+        reviewed.source = "audiovisual_reviewed".into();
+        reviewed.text = "A document appears beside the presenter; account details remain unconfirmed.".into();
+        reviewed.vector = vec![1.0];
+        let chunks = vec![raw, reviewed];
+        let selected = retrieve(&chunks, &[1.0], "account number", 4);
+        assert_eq!(selected.len(), 1);
+        assert_eq!(selected[0].source, "audiovisual_reviewed");
     }
 
     #[test]

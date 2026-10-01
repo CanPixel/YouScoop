@@ -11,6 +11,10 @@ use std::path::PathBuf;
 
 fn main() {
     let target = env::var("TARGET").unwrap();
+    let android_ndk = if target.contains("android") {
+        for key in ["ANDROID_NDK", "NDK_HOME", "ANDROID_NDK_ROOT"] { println!("cargo:rerun-if-env-changed={key}"); }
+        Some(env::var("ANDROID_NDK").or_else(|_|env::var("NDK_HOME")).or_else(|_|env::var("ANDROID_NDK_ROOT")).expect("Set ANDROID_NDK or NDK_HOME for Android builds"))
+    } else { None };
     // Link C++ standard library
     if let Some(cpp_stdlib) = get_cpp_link_stdlib(&target) {
         println!("cargo:rustc-link-lib=dylib={}", cpp_stdlib);
@@ -138,6 +142,12 @@ fn main() {
             .rust_edition(bindgen::RustEdition::Edition2021)
             .rust_target(package_msrv)
             .header("wrapper.h");
+        if let Some(ndk) = &android_ndk {
+            let host = if cfg!(target_os="macos") { "darwin-x86_64" } else if cfg!(target_os="windows") { "windows-x86_64" } else { "linux-x86_64" };
+            let sysroot = format!("{ndk}/toolchains/llvm/prebuilt/{host}/sysroot");
+            let triple = if target.contains("aarch64") { "aarch64-linux-android" } else if target.contains("armv7") { "arm-linux-androideabi" } else if target.contains("x86_64") { "x86_64-linux-android" } else { "i686-linux-android" };
+            bindings = bindings.clang_arg(format!("--sysroot={sysroot}")).clang_arg(format!("--target={triple}24")).clang_arg(format!("-I{sysroot}/usr/include/{triple}"));
+        }
 
         #[cfg(feature = "metal")]
         {
@@ -179,6 +189,11 @@ fn main() {
     }
 
     let mut config = Config::new(&whisper_root);
+    if let Some(ndk) = &android_ndk {
+        let abi = if target.contains("aarch64") { "arm64-v8a" } else if target.contains("armv7") { "armeabi-v7a" } else if target.contains("x86_64") { "x86_64" } else { "x86" };
+        config.define("CMAKE_TOOLCHAIN_FILE",format!("{ndk}/build/cmake/android.toolchain.cmake"));
+        config.define("ANDROID_ABI",abi).define("ANDROID_PLATFORM","android-24").define("ANDROID_STL","c++_shared");
+    }
 
     config
         .profile("Release")
@@ -314,7 +329,7 @@ fn main() {
         println!("cargo:rustc-link-lib=static=ggml-base");
         println!("cargo:rustc-link-lib=static=ggml-cpu");
     }
-    if cfg!(target_os = "macos") || cfg!(feature = "openblas") {
+    if target.contains("apple") || cfg!(feature = "openblas") {
         println!("cargo:rustc-link-lib=static=ggml-blas");
     }
     if cfg!(feature = "vulkan") {

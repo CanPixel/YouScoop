@@ -6,6 +6,13 @@ interface Props {
   meta: VideoMeta;
   messages: ChatMessage[];
   generating: boolean;
+  progress: string;
+  engineError: string | null;
+  onRetryEngine: () => void;
+  blocked: boolean;
+  model: "qwen" | "gemma";
+  onModelChange: (model: "qwen" | "gemma") => void;
+  gemmaReady: boolean;
   onSend: (question: string) => void;
   onStop: () => void;
   onSeek: (secs: number) => void;
@@ -36,7 +43,7 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export default function ChatPane({ meta, messages, generating, onSend, onStop, onSeek }: Props) {
+export default function ChatPane({ meta, messages, generating, progress, engineError, onRetryEngine, blocked, model, onModelChange, gemmaReady, onSend, onStop, onSeek }: Props) {
   const [input, setInput] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -76,7 +83,7 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
 
   const send = (text: string) => {
     const q = text.trim();
-    if (!q || generating || !ready) return;
+    if (!q || generating || blocked || !ready) return;
     onSend(q);
     setInput("");
     inputRef.current?.focus();
@@ -95,9 +102,13 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
         <div className="chat-head-title">Chat</div>
         <div className="chat-head-sub">
           {ready
-            ? `${meta.chunkCount} indexed moments · Qwen3 4B`
+            ? `${meta.chunkCount} indexed moments · ${model === "gemma" ? "Gemma 4 A4B" : "Qwen3 4B"}`
             : "Available once processing finishes"}
         </div>
+        <select className="chat-model-select" aria-label="Investigative chat model" value={model} disabled={generating || blocked} onChange={(e) => onModelChange(e.target.value as "qwen" | "gemma")}>
+          <option value="qwen">Qwen3 4B · quick</option>
+          <option value="gemma" disabled={!gemmaReady}>Gemma 4 A4B · deep</option>
+        </select>
       </header>
 
       <div className="chat-scroll" ref={scrollRef}>
@@ -147,6 +158,11 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
       </div>
 
       <div className="chat-input-area">
+        {engineError && model === "qwen" && <div className="inference-error" role="alert">
+          <p>{engineError}</p>
+          <button className="btn btn-ghost btn-sm" onClick={onRetryEngine} disabled={generating || blocked}>Retry local engine</button>
+        </div>}
+        {generating && progress && <p className="inference-status" role="status">{progress}</p>}
         {generating && (
           <button className="btn btn-ghost btn-sm chat-stop" onClick={onStop}>
             ■ Stop generating
@@ -165,7 +181,7 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
             placeholder={ready ? "Ask about the video…" : "Waiting for processing…"}
             value={input}
             rows={1}
-            disabled={!ready || generating}
+            disabled={!ready || generating || blocked}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -177,7 +193,7 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
           <button
             type="submit"
             className="btn btn-primary chat-send"
-            disabled={!ready || generating || !input.trim()}
+            disabled={!ready || generating || blocked || !input.trim()}
             title="Send"
           >
             ↑

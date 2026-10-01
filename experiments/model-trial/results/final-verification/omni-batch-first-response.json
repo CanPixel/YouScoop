@@ -1,0 +1,191 @@
+{
+  "request": {
+    "sourceId": "kVReoK-UBJA",
+    "clipStarts": [
+      0.0,
+      418.066667,
+      452.033333,
+      648.45,
+      679.5,
+      800.033333,
+      878.933333,
+      1154.8,
+      1296.9,
+      1462.866667,
+      1675.9,
+      1925.7
+    ],
+    "question": "Describe audible speech and visible evidence separately. Quote only confidently legible text. Identify quoted or rebuttal voices only when clear. Do not invent names, redacted values, document authenticity or verification."
+  },
+  "events": [
+    {
+      "kind": "status",
+      "detail": "Loading Omni 3B on Apple MPS"
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 1/12"
+    },
+    {
+      "kind": "moment",
+      "start": 0.0,
+      "end": 10.0,
+      "answer": "So the conspiracy theorists were right again about everything.",
+      "inputTokens": 1587,
+      "elapsedSeconds": 2.5538094588555396,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 2/12"
+    },
+    {
+      "kind": "moment",
+      "start": 418.066667,
+      "end": 428.066667,
+      "answer": "The quote is: 'Jeffrey Epstein did not have a bank account named Baal.'",
+      "inputTokens": 1587,
+      "elapsedSeconds": 2.3752011249307543,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 3/12"
+    },
+    {
+      "kind": "moment",
+      "start": 452.033333,
+      "end": 462.033333,
+      "answer": "The visible evidence shows a person sitting at a desk with a laptop, a microphone, and a can of soda. The person is wearing a black cap and a black shirt. The text on the screen includes a date, account number, and other details. The speech is about an account being labeled 'ball' and discussing the context of the label.",
+      "inputTokens": 1587,
+      "elapsedSeconds": 4.2639102498069406,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 4/12"
+    },
+    {
+      "kind": "moment",
+      "start": 648.45,
+      "end": 658.45,
+      "answer": "The audio contains a speech that says, 'Actually, it's own deity, which it is not. Moloch is originally ball.'",
+      "inputTokens": 1587,
+      "elapsedSeconds": 2.603196332929656,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 5/12"
+    },
+    {
+      "kind": "moment",
+      "start": 679.5,
+      "end": 689.5,
+      "answer": "The visible evidence shows a person wearing a black jacket and a cap with a large 'Y' on it, sitting in front of a microphone. The background includes a framed drawing and a crucifix. The speech is about referring to 'ball' and mentions 'Moloch', originally referring to a type of child sacrifice.",
+      "inputTokens": 1587,
+      "elapsedSeconds": 4.028814792167395,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 6/12"
+    },
+    {
+      "kind": "moment",
+      "start": 800.033333,
+      "end": 810.033333,
+      "answer": "The Dome of the Rock is a significant religious site located in Jerusalem.",
+      "inputTokens": 1587,
+      "elapsedSeconds": 2.1013225000351667,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 7/12"
+    },
+    {
+      "kind": "moment",
+      "start": 878.933333,
+      "end": 888.933333,
+      "answer": "The text in the image is a Wikipedia article about the Mamluk, discussing their role as slave soldiers in medieval Egypt. The article includes a brief history, their military legacy, and their significance in the region. The text also mentions that their name translates to \"one who is owned.\"",
+      "inputTokens": 1587,
+      "elapsedSeconds": 3.744021249935031,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 8/12"
+    },
+    {
+      "kind": "moment",
+      "start": 1154.8,
+      "end": 1164.8,
+      "answer": "The visible evidence shows a person wearing a black jacket and a cap with a white letter 'Y' on it, sitting in front of a microphone and speaking. The background includes a whiteboard with some writing and a crucifix hanging on the wall. The audio contains a speech discussing the alignment of certain events with the location of B.B. Netanyahu at the time, suggesting that Epstein was likely sending something.",
+      "inputTokens": 1587,
+      "elapsedSeconds": 4.623562833061442,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 9/12"
+    },
+    {
+      "kind": "moment",
+      "start": 1296.9,
+      "end": 1306.9,
+      "answer": "The audio contains the following quote: 'and the same idea is enacted when you are performing sacrificing of children or you know engaging in'",
+      "inputTokens": 1587,
+      "elapsedSeconds": 2.5509427920915186,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 10/12"
+    },
+    {
+      "kind": "moment",
+      "start": 1462.866667,
+      "end": 1472.866667,
+      "answer": "So ball worship never left Brazil, it just continued and changed over and is all.",
+      "inputTokens": 1587,
+      "elapsedSeconds": 2.195656833006069,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 11/12"
+    },
+    {
+      "kind": "moment",
+      "start": 1675.9,
+      "end": 1685.9,
+      "answer": "The visible evidence shows a document with text that appears to be a conversation or discussion about a job performance. The text is partially redacted, but it includes phrases such as 'they did a great job closing most at least for them' and 'referring to us as cattle again saying it was a good job.' The audio contains a voice that seems to be discussing the same topic, mentioning 'cattle' and 'good job' in relation to the job performance.",
+      "inputTokens": 1587,
+      "elapsedSeconds": 5.151339832926169,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 12/12"
+    },
+    {
+      "kind": "moment",
+      "start": 1925.7,
+      "end": 1935.7,
+      "answer": "GET THE FULL",
+      "inputTokens": 1587,
+      "elapsedSeconds": 1.6448891670443118,
+      "truncated": false
+    },
+    {
+      "kind": "result",
+      "answer": "",
+      "elapsedSeconds": 50.584715833188966,
+      "peakMemoryGb": 9.76191488,
+      "truncated": false
+    }
+  ],
+  "stderrTail": "vgan_model.activation_post.act.alpha                                               | UNEXPECTED |  | \ntalker.model.norm.weight                                                                                 | UNEXPECTED |  | \n\nNotes:\n- UNEXPECTED:\tcan be ignored when loading from different task/architecture; not ok if you expect identical arch.\n[transformers] Model config: tts_text_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151860. This may result in unexpected behavior.\n[transformers] Model config: tts_text_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151861. This may result in unexpected behavior.\n[transformers] Model config: tts_text_pad_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151859. This may result in unexpected behavior.\n[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151652. This may result in unexpected behavior.\n[transformers] Model config: vision_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151653. This may result in unexpected behavior.\n[transformers] Model config: audio_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151647. This may result in unexpected behavior.\n[transformers] Model config: audio_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151648. This may result in unexpected behavior.\n[transformers] Qwen2VL video processing does not apply the per-frame pixel cap the reference implementation (qwen-vl-utils) applies, so some videos cost far more tokens than they would there. In v5.22 the capped behavior will become the default and `cap_pixels_per_frame` will be removed. Pass `cap_pixels_per_frame=True` to adopt the reference behavior now, or `False` to keep the current behavior and silence this warning.\n",
+  "exitCode": 0
+}

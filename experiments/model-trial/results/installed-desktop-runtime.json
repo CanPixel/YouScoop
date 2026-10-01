@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-09-30",
+  "installation": {
+    "cachedGemma": "/Users/canur/Library/Application Support/com.canpixel.youscoop/desktop-runtime/models/gemma-0d77464eeb233a2da68ebf9d7dc4edaac7db956d",
+    "cachedOmni": "/Users/canur/Library/Application Support/com.canpixel.youscoop/desktop-runtime/models/omni-f75b40e3da2003cdd6e1829b1f420ca70797c34e",
+    "config": {
+      "gemmaModel": "/Users/canur/Library/Application Support/com.canpixel.youscoop/desktop-runtime/models/gemma-0d77464eeb233a2da68ebf9d7dc4edaac7db956d",
+      "omniModel": "/Users/canur/Library/Application Support/com.canpixel.youscoop/desktop-runtime/models/omni-f75b40e3da2003cdd6e1829b1f420ca70797c34e",
+      "python": "/Users/canur/Library/Application Support/com.canpixel.youscoop/desktop-runtime/py31315-2c20cd5e62d129b5/bin/python"
+    },
+    "gemmaReady": true,
+    "omniReady": true,
+    "runtimeReady": true,
+    "uvAvailable": true
+  },
+  "gemmaWorker": {
+    "events": [
+      {
+        "answer": "A source making a claim presents an assertion as fact, whereas an independently verified claim has been cross-referenced and validated by external, impartial evidence.",
+        "elapsedSeconds": 25.958374209003523,
+        "kind": "result",
+        "peakMemoryGb": 14.287344527,
+        "truncated": false
+      }
+    ]
+  },
+  "omniWorker": {
+    "events": [
+      {
+        "answer": "The visible document text reads: 'From: Jeffrey Epstein / C90 Foundation\nTo: William Shatner & SP Morgan\nDate: Jul 29 2009 11:55 P. M.\nRe: The C90 Foundation A/C\nPlease wire Eleven Thousand Four Hundred Thirty Eight Dollars 6.10/100 (11,438.00) from the above account to:\nBasl name: Wachus",
+        "elapsedSeconds": 6.431042458163574,
+        "end": 400,
+        "inputTokens": 1588,
+        "kind": "moment",
+        "start": 390
+      },
+      {
+        "answer": "",
+        "elapsedSeconds": 25.58003620803356,
+        "kind": "result",
+        "peakMemoryGb": 9.749331968,
+        "truncated": false
+      }
+    ]
+  },
+  "scope": "Native Tauri worker path without a GUI. Independent sequential workers; persistent app-data Python/models. Not a UI test, full-video benchmark or answer-accuracy pass.",
+  "limits": [
+    "Omni 100-token sample misreads text and reaches its output limit. This run preceded the truncation-metadata repair.",
+    "No claim that either generated answer was independently fact checked.",
+    "Both-apps-open repeat: 52.94 seconds including model load; output-limit flag correctly true. After completion both native apps remained running and no model worker remained. This is not a full GUI inspection test."
+  ],
+  "omniWorkerWithBothAppsOpen": {
+    "events": [
+      {
+        "answer": "The visible document text reads: 'From: Jeffrey Epstein / C90 Foundation\nTo: William Shatner & SP Morgan\nDate: Jul 29 2009 11:55 P. M.\nRe: The C90 Foundation A/C\nPlease wire Eleven Thousand Four Hundred Thirty Eight Dollars 6.10/100 (11,438.00) from the above account to:\nBasl name: Wachus",
+        "elapsedSeconds": 19.690594458952543,
+        "end": 400,
+        "inputTokens": 1588,
+        "kind": "moment",
+        "start": 390,
+        "truncated": true
+      },
+      {
+        "answer": "",
+        "elapsedSeconds": 52.940393625060096,
+        "kind": "result",
+        "peakMemoryGb": 9.749331968,
+        "truncated": true
+      }
+    ]
+  }
+}

@@ -1,4 +1,7 @@
+mod batch_inspection;
+mod investigation;
 pub mod llm;
+pub mod archive;
 mod media;
 mod models;
 mod pipeline;
@@ -8,6 +11,11 @@ pub mod store;
 pub mod stt;
 mod vtt;
 mod ytdlp;
+mod desktop_worker;
+mod runtime_setup;
+#[cfg(feature = "diagnostics")]
+pub use runtime_setup::verify_desktop_setup;
+mod memory;
 
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -25,6 +33,12 @@ fn err_str(e: impl std::fmt::Display) -> String {
 }
 
 // ---------- Setup / models ----------
+
+#[tauri::command]
+async fn save_to_archive(app: AppHandle, id: String) -> CmdResult<archive::SavedSource> {
+    tauri::async_runtime::spawn_blocking(move || archive::save(&app,&id))
+        .await.map_err(err_str)?.map_err(err_str)
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -90,7 +104,7 @@ struct EngineStatus {
 /// Make sure the engine is loaded, starting or waiting for a load as needed.
 /// Callers that need inference (adding videos, asking questions) funnel
 /// through here, so the UI can open before the multi-GB models are resident.
-async fn ensure_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), String> {
+async fn ensure_engine(app: &AppHandle, state: &Arc<AppState>, admission:&inference_coordinator::Admission) -> Result<(), String> {
     loop {
         if state.engine_loaded() {
             return Ok(());
@@ -101,6 +115,10 @@ async fn ensure_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), Str
             continue;
         }
         // We own the load now.
+        struct Loading<'a>(&'a std::sync::atomic::AtomicBool);
+        impl Drop for Loading<'_>{fn drop(&mut self){self.0.store(false,Ordering::SeqCst);}}
+        let _loading=Loading(&state.engine_loading);
+        memory::resident(app,state,admission).map_err(err_str)?;
         return do_load_engine(app, state).await;
     }
 }
@@ -120,7 +138,6 @@ async fn do_load_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), St
         (&embed, "embeddings"),
     ] {
         if !p.exists() {
-            state.engine_loading.store(false, Ordering::SeqCst);
             let msg = format!("{name} model is missing: download it first.");
             let _ = app.emit(
                 "engine-status",
@@ -141,7 +158,6 @@ async fn do_load_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), St
     .await
     .map_err(err_str);
 
-    state.engine_loading.store(false, Ordering::SeqCst);
     match result.and_then(|r| r.map_err(err_str)) {
         Ok(engine) => {
             *state.engine.lock().unwrap() = Some(engine);
@@ -161,7 +177,8 @@ async fn do_load_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), St
 #[tauri::command]
 async fn load_engine(app: AppHandle, state: State<'_, Arc<AppState>>) -> CmdResult<()> {
     let state = state.inner().clone();
-    ensure_engine(&app, &state).await
+    let scope=memory::normal(&app,&state,Arc::new(std::sync::atomic::AtomicBool::new(false))).await.map_err(err_str)?;
+    ensure_engine(&app, &state,&scope.admission).await
 }
 
 // ---------- Library ----------
@@ -177,6 +194,7 @@ struct VideoDetail {
     meta: VideoMeta,
     chunks: Vec<ChunkPublic>,
     transcript: Vec<vtt::Cue>,
+    moments: Vec<desktop_worker::Moment>,
 }
 
 #[tauri::command]
@@ -186,7 +204,8 @@ fn video_detail(app: AppHandle, id: String) -> CmdResult<VideoDetail> {
         .map(|cs| cs.iter().map(ChunkPublic::from).collect())
         .unwrap_or_default();
     let transcript = store::load_cues(&app, &id).unwrap_or_default();
-    Ok(VideoDetail { meta, chunks, transcript })
+    let moments = desktop_worker::moments(&app,&id).map_err(err_str)?;
+    Ok(VideoDetail { meta, chunks, transcript, moments })
 }
 
 /// Wait for the engine, then run the given ingest future; engine-load
@@ -197,7 +216,10 @@ where
     Fut: std::future::Future<Output = ()> + Send,
 {
     tauri::async_runtime::spawn(async move {
-        if let Err(e) = ensure_engine(&app, &state).await {
+        let scope=match memory::normal(&app,&state,Arc::new(std::sync::atomic::AtomicBool::new(false))).await {
+            Ok(scope)=>scope,Err(e)=>{pipeline::emit_global_error(&app,e.to_string());return;}
+        };
+        if let Err(e) = ensure_engine(&app, &state,&scope.admission).await {
             pipeline::emit_global_error(&app, e);
             return;
         }
@@ -335,10 +357,11 @@ async fn ask_video(
     }
     let chunks = store::load_index(&app, &video_id).map_err(err_str)?;
     let state = state.inner().clone();
-    ensure_engine(&app, &state).await?;
+    state.chat_cancel.store(false, Ordering::Relaxed);
+    let scope=memory::normal(&app,&state,state.chat_cancel.clone()).await.map_err(err_str)?;
+    ensure_engine(&app, &state,&scope.admission).await?;
     let engine = state.require_engine().map_err(err_str)?;
 
-    state.chat_cancel.store(false, Ordering::Relaxed);
     let cancel = state.chat_cancel.clone();
     let history: Vec<rag::HistoryTurn> = history
         .into_iter()
@@ -418,9 +441,21 @@ pub fn run() {
         .manage(Arc::new(AppState::new()))
         .setup(|app| {
             store::cleanup_orphans(app.handle());
+            memory::watch(app.handle().clone(),tauri::Manager::state::<Arc<AppState>>(app).inner().clone())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            desktop_worker::worker_status,
+            desktop_worker::configure_worker,
+            runtime_setup::setup_desktop_runtime,
+            runtime_setup::install_desktop_model,
+            desktop_worker::inspect_moment,
+            desktop_worker::review_moment,
+            desktop_worker::remove_review_moment,
+            batch_inspection::inspect_source,
+            desktop_worker::ask_gemma,
+            desktop_worker::stop_worker,
+            save_to_archive,
             setup_status,
             download_model,
             update_ytdlp,
@@ -435,7 +470,7 @@ pub fn run() {
             ask_video,
             stop_chat,
         ])
-        .build(tauri::generate_context!())
+        .build(app_context())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
             if let tauri::RunEvent::Exit = event {
@@ -448,4 +483,8 @@ pub fn run() {
                 drop(whisper);
             }
         });
+}
+
+fn app_context() -> tauri::Context<tauri::Wry> {
+    tauri::generate_context!()
 }

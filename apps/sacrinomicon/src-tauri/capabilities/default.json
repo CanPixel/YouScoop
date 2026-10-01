@@ -1,0 +1,11 @@
+{
+  "identifier": "default",
+  "description": "Archive window access",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "opener:default"
+  ]
+}

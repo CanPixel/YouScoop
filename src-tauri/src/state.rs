@@ -10,6 +10,11 @@ use crate::llm::Engine;
 use crate::stt::WhisperEngine;
 
 pub struct AppState {
+    /// Normal inference shares this gate; external large models acquire it exclusively.
+    pub inference_gate: Arc<tokio::sync::RwLock<()>>,
+    pub worker_cancel: Arc<AtomicBool>,
+    pub worker_busy: AtomicBool,
+    pub memory_resident: Mutex<Option<inference_coordinator::Resident>>,
     /// The inference engine (SmolVLM2 + embeddings). One lock serializes GPU work.
     pub engine: Arc<Mutex<Option<Engine>>>,
     /// Whisper is loaded lazily the first time a caption-less video shows up.
@@ -25,6 +30,10 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Self {
         Self {
+            inference_gate: Arc::new(tokio::sync::RwLock::new(())),
+            worker_cancel: Arc::new(AtomicBool::new(false)),
+            worker_busy: AtomicBool::new(false),
+            memory_resident: Mutex::new(None),
             engine: Arc::new(Mutex::new(None)),
             whisper: Arc::new(Mutex::new(None)),
             cancels: Mutex::new(HashMap::new()),

@@ -1,0 +1,191 @@
+{
+  "request": {
+    "sourceId": "kVReoK-UBJA",
+    "clipStarts": [
+      0.0,
+      418.066667,
+      452.033333,
+      648.45,
+      679.5,
+      800.033333,
+      878.933333,
+      1154.8,
+      1296.9,
+      1462.866667,
+      1675.9,
+      1925.7
+    ],
+    "question": "In one short sentence, describe only what the camera shows. Ignore the spoken words. Do not quote or guess on-screen text, names, dates, numbers, or what a document proves."
+  },
+  "events": [
+    {
+      "kind": "status",
+      "detail": "Loading Omni 3B on Apple MPS"
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 1/12"
+    },
+    {
+      "kind": "moment",
+      "start": 0.0,
+      "end": 10.0,
+      "answer": "A man wearing a black cap and jacket sits in front of a microphone.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.6533151660114527,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 2/12"
+    },
+    {
+      "kind": "moment",
+      "start": 418.066667,
+      "end": 428.066667,
+      "answer": "The video shows two individuals engaged in a discussion, with one person wearing a green hoodie and the other in a black shirt and cap.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.5818050410598516,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 3/12"
+    },
+    {
+      "kind": "moment",
+      "start": 452.033333,
+      "end": 462.033333,
+      "answer": "A person is sitting at a desk with a laptop and a microphone, pointing at a screen.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.317226333077997,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 4/12"
+    },
+    {
+      "kind": "moment",
+      "start": 648.45,
+      "end": 658.45,
+      "answer": "a man wearing a black hat is sitting in front of a microphone.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.066014540847391,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 5/12"
+    },
+    {
+      "kind": "moment",
+      "start": 679.5,
+      "end": 689.5,
+      "answer": "A person is sitting in front of a microphone and speaking.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 1.9959383751265705,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 6/12"
+    },
+    {
+      "kind": "moment",
+      "start": 800.033333,
+      "end": 810.033333,
+      "answer": "A man is sitting in front of a microphone and a computer screen.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.0741513329558074,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 7/12"
+    },
+    {
+      "kind": "moment",
+      "start": 878.933333,
+      "end": 888.933333,
+      "answer": "A person is speaking into a microphone while wearing a black jacket and a cap with a white letter 'Y' on it.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.4876928329467773,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 8/12"
+    },
+    {
+      "kind": "moment",
+      "start": 1154.8,
+      "end": 1164.8,
+      "answer": "A person is sitting in front of a microphone and speaking.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.0023564158473164,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 9/12"
+    },
+    {
+      "kind": "moment",
+      "start": 1296.9,
+      "end": 1306.9,
+      "answer": "A person is sitting at a desk with a microphone and laptop, gesturing with their hands.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.2562989580910653,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 10/12"
+    },
+    {
+      "kind": "moment",
+      "start": 1462.866667,
+      "end": 1472.866667,
+      "answer": "A man wearing a black hoodie and a black cap with a white letter Y on it is speaking into a microphone.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.435921457828954,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 11/12"
+    },
+    {
+      "kind": "moment",
+      "start": 1675.9,
+      "end": 1685.9,
+      "answer": "A person is sitting in front of a microphone and computer screen.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.0396775419358164,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 12/12"
+    },
+    {
+      "kind": "moment",
+      "start": 1925.7,
+      "end": 1935.7,
+      "answer": "A person is sitting in front of a microphone, wearing a black hoodie and a cap with a white letter 'Y' on it.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.576598959043622,
+      "truncated": false
+    },
+    {
+      "kind": "result",
+      "answer": "",
+      "elapsedSeconds": 39.883228125050664,
+      "peakMemoryGb": 9.76191488,
+      "truncated": false
+    }
+  ],
+  "stderrTail": "_model.input_embed.spk_encoder.fc.bias                                             | UNEXPECTED |  | \ntoken2wav.code2wav_dit_model.input_embed.spk_encoder.asp.conv.weight                                     | UNEXPECTED |  | \n\nNotes:\n- UNEXPECTED:\tcan be ignored when loading from different task/architecture; not ok if you expect identical arch.\n[transformers] Model config: tts_text_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151860. This may result in unexpected behavior.\n[transformers] Model config: tts_text_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151861. This may result in unexpected behavior.\n[transformers] Model config: tts_text_pad_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151859. This may result in unexpected behavior.\n[transformers] Model config: vision_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151652. This may result in unexpected behavior.\n[transformers] Model config: vision_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151653. This may result in unexpected behavior.\n[transformers] Model config: audio_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151647. This may result in unexpected behavior.\n[transformers] Model config: audio_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151648. This may result in unexpected behavior.\n[transformers] Qwen2VL video processing does not apply the per-frame pixel cap the reference implementation (qwen-vl-utils) applies, so some videos cost far more tokens than they would there. In v5.22 the capped behavior will become the default and `cap_pixels_per_frame` will be removed. Pass `cap_pixels_per_frame=True` to adopt the reference behavior now, or `False` to keep the current behavior and silence this warning.\n",
+  "exitCode": 0
+}

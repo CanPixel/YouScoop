@@ -90,7 +90,7 @@ fn persist(app: &AppHandle, meta: &VideoMeta) -> Result<()> {
 }
 
 // Longer videos take ages to download, describe, and index locally.
-const MAX_DURATION_SECS: f64 = 90.0 * 60.0;
+const MAX_DURATION_SECS: f64 = 120.0 * 60.0;
 
 /// Video file extensions accepted for local ingestion.
 pub const LOCAL_VIDEO_EXTS: [&str; 6] = ["mp4", "mov", "m4v", "webm", "mkv", "avi"];
@@ -114,7 +114,7 @@ pub async fn ingest(app: AppHandle, state: Arc<AppState>, url: String) {
         emit_global_error(
             &app,
             format!(
-                "\"{}\" is {} long — YouScoop caps videos at 1:30:00 to keep local processing reasonable.",
+                "\"{}\" is {} long. YouScoop accepts videos up to 2:00:00.",
                 info.title,
                 rag::format_ts(info.duration_secs),
             ),
@@ -175,7 +175,7 @@ pub async fn ingest_local(app: AppHandle, state: Arc<AppState>, path: PathBuf) {
         emit_global_error(
             &app,
             format!(
-                "\"{}\" is {} long — YouScoop caps videos at 1:30:00 to keep local processing reasonable.",
+                "\"{}\" is {} long. YouScoop accepts videos up to 2:00:00.",
                 file_name,
                 rag::format_ts(duration),
             ),

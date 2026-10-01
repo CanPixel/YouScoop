@@ -1,0 +1,133 @@
+{
+  "answer": "According to the speaker, the bank account was called **\"Ball\"**.  \n\nThis is stated in multiple passages:  \n- [E2] references \"a bank account named Ball\" and discusses the deity Bal (later mistranslated as Moolok).  \n- [E3] explicitly states: “Jeffrey Epstein did not have a bank account named Ball. Yes, he did.” and notes the speaker’s own assertion that \"the only time an account is labeled ball is the time that I said it was.\"  \n- [E4] says: “He or he had one bank account named Ball.”  \n- [E6] references “the bank account named Ball” as part of a broader narrative linking Epstein to ancient Canaanite worship.  \n\nHowever, there is a noted inconsistency in spelling: the original automated extractions use \"Ball\" or \"Baal,\" and user annotation clarifies that the speaker says **\"Baal,\" not \"Ball.\"**  \n\nThus, while the speaker claims the account was named \"Ball,\" the transcription and annotation indicate that the intended name—based on the context of ancient Canaanite deities—is **Baal**.  \n\nTherefore, the speaker's stated name is \"Ball,\" but the correction suggests the intended reference is to **\"Baal.\"**  \n\nFinal answer: The speaker claims the account was named **\"Ball\"**, though this may be a transcription error or misstatement; the intended name, based on context, is likely **Baal**. [E1], [E2], [E3], [E4], [E5], [E6]",
+  "elapsedSeconds": 17.730890958,
+  "question": "According to the speaker, what was the bank account called?",
+  "sources": [
+    {
+      "assessment": {
+        "correctedText": "you would be called a crazy person. Now, you might just be called in denial because this document from the files has Jeffrey Epstein depositing money into an account that he has named Baal. Now, obviously, it could be some sort of sick, twisted, weird joke maybe, but at the same time, this is very alarming and very strange because I don't have bank accounts with the names of ancient deities that are basically worshiped via child sacrifice. Now, in this video, he is stating that Jeffrey Epstein did not have a bank account named Baal. His reasoning is very strange and I I disprove what he",
+        "entityId": "evidence:9c86e1514739a7b9125997d9e5d17828e50a24db9821ef54302f02e16910c218",
+        "note": "User clarification: the speaker says Baal, not Ball. Keep the original captions unchanged. This spelling correction does not independently verify the bank account allegation.",
+        "status": "uncertain",
+        "updatedAt": 1790782999
+      },
+      "evidence": {
+        "end": 427.909,
+        "id": "evidence:9c86e1514739a7b9125997d9e5d17828e50a24db9821ef54302f02e16910c218",
+        "kind": "speech",
+        "provenance": {
+          "generatedAt": 1790758299,
+          "method": "source_captions",
+          "model": null,
+          "originalAsset": "asset:4c1032a3ad10d6a7211a29572e9e2d74f6bff2e457c5e4555dd994a50b76d786"
+        },
+        "sourceId": "source:c49e4bbdd65cc1d6ad44493084081e75877f4774a892bf40e44f0c809478fc26",
+        "start": 386.479,
+        "text": "you would be called a crazy person. Now, you might just be called in denial because this document from the files has Jeffrey Epstein depositing money into an account that he has named Ball. Now, obviously, it could be some sort of sick, twisted, weird joke maybe, but at the same time, this is very alarming and very strange because I don't have bank accounts with the names of ancient deities that are basically worshiped via child sacrifice. Now, in this video, he is stating that Jeffrey Epstein did not have a bank account named Ball. His reasoning is very strange and I I disprove what he",
+        "vector": []
+      },
+      "score": 0.9930027723312378,
+      "sourceTitle": "The Occult Teachings of Jefferey Epstein"
+    },
+    {
+      "assessment": null,
+      "evidence": {
+        "end": 762.87,
+        "id": "evidence:063443c2cce10079e6612688021e9933f149fd897f306df9f13570c6d3b1d172",
+        "kind": "speech",
+        "provenance": {
+          "generatedAt": 1790758299,
+          "method": "source_captions",
+          "model": null,
+          "originalAsset": "asset:4c1032a3ad10d6a7211a29572e9e2d74f6bff2e457c5e4555dd994a50b76d786"
+        },
+        "sourceId": "source:c49e4bbdd65cc1d6ad44493084081e75877f4774a892bf40e44f0c809478fc26",
+        "start": 722.32,
+        "text": "bank account named Ball. They're harming children. That's like the important thing here. And a lot of people are going to kind of forget that's the point because that's what the internet does. Now, this is where things get very, very interesting. Now, I'm referring to an ancient Canaanite deity. The Canaanites were technically Phoenicians. The Phoenicians were essentially late period iron age Canaanites of the Levant coast. They called themselves Canaanites and their land Canaan with Phoenician being a Greek name for these maritime traders. So Bal, who is sometimes now referred to as Moolok because of a mistransation, is",
+        "vector": []
+      },
+      "score": 0.8319237232208252,
+      "sourceTitle": "The Occult Teachings of Jefferey Epstein"
+    },
+    {
+      "assessment": null,
+      "evidence": {
+        "end": 463.51,
+        "id": "evidence:ad4ac159c5221a5c0fa36046fce4336f6217b4db7246df330bcb234b8e188f94",
+        "kind": "speech",
+        "provenance": {
+          "generatedAt": 1790758299,
+          "method": "source_captions",
+          "model": null,
+          "originalAsset": "asset:4c1032a3ad10d6a7211a29572e9e2d74f6bff2e457c5e4555dd994a50b76d786"
+        },
+        "sourceId": "source:c49e4bbdd65cc1d6ad44493084081e75877f4774a892bf40e44f0c809478fc26",
+        "start": 425.52,
+        "text": "very strange and I I disprove what he says, but I want to nip this in the bud cuz I know somebody's going to comment this and I just I don't even want to deal with trying to respond. >> Jeffrey Epstein did not have a bank account named Ball. >> Yes, he did. This premise is hobgoblins. And also, yes. >> Wait, what? >> When you hobgoblins, that's weird. I didn't notice that the first time I watched it. >> Interesting choice of vernacular, sir. So basically the only time an account is labeled ball is the time that I said it was as he says right here. >> So why would it say bow name? Well for that I had to actually go to AI to get a",
+        "vector": []
+      },
+      "score": 0.8204073905944824,
+      "sourceTitle": "The Occult Teachings of Jefferey Epstein"
+    },
+    {
+      "assessment": null,
+      "evidence": {
+        "end": 725.35,
+        "id": "evidence:6e208c3b1b7d405c41cd810b2b7c0b005989dad9c31050614a2e3eccf27ba227",
+        "kind": "speech",
+        "provenance": {
+          "generatedAt": 1790758299,
+          "method": "source_captions",
+          "model": null,
+          "originalAsset": "asset:4c1032a3ad10d6a7211a29572e9e2d74f6bff2e457c5e4555dd994a50b76d786"
+        },
+        "sourceId": "source:c49e4bbdd65cc1d6ad44493084081e75877f4774a892bf40e44f0c809478fc26",
+        "start": 684.48,
+        "text": "to Moolok. But originally, Moolok was a type of child sacrifice. That's what it was. So, just to get all the confusion out of there. Now, a lot of people are probably going to start arguing about this in the comments, but that's not really the point of this. The point here is to showcase that there is absolutely child sacrifice and child harm and torture going on within the elites of the world. That is real. We're not focusing on very minute discrepancies in the names of ancient deities. His bank account was named Ball. He or he had one bank account named Ball. They're harming",
+        "vector": []
+      },
+      "score": 0.8125354647636414,
+      "sourceTitle": "The Occult Teachings of Jefferey Epstein"
+    },
+    {
+      "assessment": null,
+      "evidence": {
+        "end": 494.15,
+        "id": "evidence:7966e0ad22b9315e7da7808681889acf9c2bdb22223a575b29557add39a95eca",
+        "kind": "speech",
+        "provenance": {
+          "generatedAt": 1790758299,
+          "method": "source_captions",
+          "model": null,
+          "originalAsset": "asset:4c1032a3ad10d6a7211a29572e9e2d74f6bff2e457c5e4555dd994a50b76d786"
+        },
+        "sourceId": "source:c49e4bbdd65cc1d6ad44493084081e75877f4774a892bf40e44f0c809478fc26",
+        "start": 461.44,
+        "text": "that I had to actually go to AI to get a suggestion of what the was going on cuz I couldn't figure it out. And really I remember them but I don't really know about them. I've never I don't know if fax machines [ __ ] things up like that. I don't I don't know why it says ball name, but I do know that I don't see any evidence that he had in a bank account named ball. >> I don't see any evidence that he had an account named ball except for in the one instance where it's actually named ball and there's no explanation as to why other than the account being named ball and then you tried to make a convoluted",
+        "vector": []
+      },
+      "score": 0.8104149699211121,
+      "sourceTitle": "The Occult Teachings of Jefferey Epstein"
+    },
+    {
+      "assessment": null,
+      "evidence": {
+        "end": 1036.549,
+        "id": "evidence:0d9790c31aa373ebca86640083857b5badd5a429b456d3f5f2aa09b494b1a2b6",
+        "kind": "speech",
+        "provenance": {
+          "generatedAt": 1790758299,
+          "method": "source_captions",
+          "model": null,
+          "originalAsset": "asset:4c1032a3ad10d6a7211a29572e9e2d74f6bff2e457c5e4555dd994a50b76d786"
+        },
+        "sourceId": "source:c49e4bbdd65cc1d6ad44493084081e75877f4774a892bf40e44f0c809478fc26",
+        "start": 995.519,
+        "text": "onto other groups of people, maybe you should think about it. This is an image of Bill Clinton in a bath house from the first drop of the Epstein files. This is a newer image of Epstein in a bath as well, but there's a lot of connection to the bath house idea. We have the bath house from Syria that his temple is mo modeled after that is from the former land of Canaan where the Canaanites worshiped Ball. We have the bank account named Ball. And this is all going to connect more in a moment, but essentially what we kind of can gather and what we know from the history of this entire operation is Maxwell would",
+        "vector": []
+      },
+      "score": 0.7369692325592041,
+      "sourceTitle": "The Occult Teachings of Jefferey Epstein"
+    }
+  ]
+}
