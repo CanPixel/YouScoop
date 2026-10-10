@@ -29,7 +29,7 @@ pub fn root(app: &AppHandle) -> Result<PathBuf> {
     Ok(app.path().app_data_dir()?.join("desktop-runtime"))
 }
 fn environment(app: &AppHandle) -> Result<PathBuf> {
-    let digest = knowledge_core::stable_id("runtime", REQUIREMENTS);
+    let digest = crate::digest::stable_id("runtime", REQUIREMENTS);
     Ok(root(app)?.join(format!("py31315-{}", &digest[8..24])))
 }
 pub fn defaults(app: &AppHandle) -> Result<WorkerConfig> {
@@ -77,7 +77,7 @@ pub fn is_ready(app: &AppHandle, cfg: &WorkerConfig) -> bool {
         .and_then(|data| serde_json::from_slice::<Value>(&data).ok())
         .is_some_and(|receipt| {
             receipt["configuredPython"] == cfg.python
-                && receipt["requirementsId"] == knowledge_core::stable_id("runtime", REQUIREMENTS)
+                && receipt["requirementsId"] == crate::digest::stable_id("runtime", REQUIREMENTS)
         })
 }
 fn status(app: &AppHandle, detail: &str) {
@@ -216,7 +216,7 @@ async fn probe(
 fn remember_probe(app: &AppHandle, python: &str, probe: Value) -> Result<()> {
     atomic_json(
         &root(app)?.join("runtime-ready.json"),
-        &json!({"configuredPython":python, "requirementsId":knowledge_core::stable_id("runtime", REQUIREMENTS), "probe":probe, "verifiedAt":knowledge_core::now()}),
+        &json!({"configuredPython":python, "requirementsId":crate::digest::stable_id("runtime", REQUIREMENTS), "probe":probe, "verifiedAt":crate::digest::now()}),
     )
 }
 pub async fn configure(app: &AppHandle, state: &Arc<AppState>, cfg: &WorkerConfig) -> Result<()> {

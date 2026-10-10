@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import MessageBody from "./MessageBody";
+import { api } from "../api";
 import type { ChatMessage, VideoMeta } from "../types";
 
 interface Props {
@@ -89,6 +90,19 @@ export default function ChatPane({ meta, messages, generating, progress, engineE
     inputRef.current?.focus();
   };
 
+  const [sent, setSent] = useState<Record<string, string>>({});
+  /** Send one answer, with the question that asked it, to WiZMUTH's inbox. */
+  const sendToWizmuth = async (m: ChatMessage) => {
+    const index = messages.findIndex((x) => x.id === m.id);
+    const question = index > 0 && messages[index - 1].role === "user" ? messages[index - 1].text : "Answer";
+    try {
+      const note = await api.sendAnswerToWizmuth(meta.id, question, m.text);
+      setSent((s) => ({ ...s, [m.id]: note.path }));
+    } catch (error) {
+      setSent((s) => ({ ...s, [m.id]: `error:${String(error)}` }));
+    }
+  };
+
   const copyMessage = async (m: ChatMessage) => {
     if (await copyText(m.text)) {
       setCopiedId(m.id);
@@ -149,6 +163,15 @@ export default function ChatPane({ meta, messages, generating, progress, engineE
                     onClick={() => void copyMessage(m)}
                   >
                     {copiedId === m.id ? "✓ Copied" : "⧉ Copy"}
+                  </button>
+                )}
+                {m.role === "assistant" && !m.streaming && m.text && !m.error && (
+                  <button
+                    className={`msg-copy ${sent[m.id] && !sent[m.id].startsWith("error:") ? "copied" : ""}`}
+                    title={sent[m.id]?.startsWith("error:") ? sent[m.id].slice(6) : "Send this answer to WiZMUTH as a note"}
+                    onClick={() => void sendToWizmuth(m)}
+                  >
+                    {sent[m.id] ? (sent[m.id].startsWith("error:") ? "Could not send" : "✓ In WiZMUTH") : "→ WiZMUTH"}
                   </button>
                 )}
               </div>

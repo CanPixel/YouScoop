@@ -39,7 +39,7 @@ pub fn context(chunks: &[Chunk], question: &str) -> Context {
     let total: usize = all.iter().map(cost).sum();
     let mut selected = BTreeSet::new();
     // A listing question ("Which emails are shown?") includes every passage of its kind first.
-    let kind = knowledge_core::listing_kind(question);
+    let kind = rag::listing_kind(question);
     let listed: Vec<usize> = kind.map_or_else(Vec::new, |kind| {
         let prefix = format!("[{kind}]");
         all.iter().enumerate().filter(|(_, p)| p.label == "on-screen text" && p.text.starts_with(&prefix)).map(|(i, _)| i).collect()
@@ -120,10 +120,51 @@ pub fn messages(title: &str, channel: &str, context: &Context, question: &str, h
     messages
 }
 
+/// Resolve supplied passage references and scope absence-of-proof statements.
+pub fn grounded_answer(raw: &str, evidence_count: usize) -> String {
+    let mut output=String::new();let mut rest=raw;
+    while let Some(open)=rest.find('[') {
+        output.push_str(&rest[..open]);rest=&rest[open..];
+        let Some(close)=rest.find(']') else {break;};
+        let label=&rest[1..close];
+        if label.starts_with('E') {
+            let ids:Vec<_>=label.split(',').map(str::trim).collect();
+            for (i,id) in ids.iter().enumerate() {
+                if i>0 { output.push(' '); }
+                match id.strip_prefix('E').and_then(|n|n.parse::<usize>().ok()).filter(|n|*n>0&&*n<=evidence_count) {
+                    Some(n)=>output.push_str(&format!("[E{n}]")),
+                    None=>output.push_str("(unavailable evidence reference)"),
+                }
+            }
+        } else {output.push_str(&rest[..=close]);}
+        rest=&rest[close+1..];
+    }
+    output.push_str(rest);
+    // Retrieval cannot establish absence of evidence in the full video or
+    // outside the archive. Keep that scope explicit in generated conclusions.
+    for (phrase,replacement) in [
+        ("the speaker does not provide independent verification","the supplied excerpts do not provide independent verification"),
+        ("the source does not provide independent verification","the supplied excerpts do not provide independent verification"),
+        ("the video does not provide independent verification","the supplied excerpts do not provide independent verification"),
+        ("not confirmed by evidence","not independently confirmed by the retrieved excerpts"),
+        ("not a confirmed fact","not independently confirmed by these retrieved excerpts"),
+        ("not an established fact","not independently established by these retrieved excerpts"),
+        ("no supporting documentation or verification provided","no independently verified documentation in these retrieved excerpts"),
+        ("the speaker does not mention","in the retrieved excerpts, the speaker does not mention"),
+        ("the speaker does not discuss","in the retrieved excerpts, the speaker does not discuss"),
+    ] {
+        let mut from=0;
+        while let Some(index)=output[from..].to_ascii_lowercase().find(phrase) {
+            let start=from+index;let replacement=if output.as_bytes()[start].is_ascii_uppercase(){let mut r=replacement.to_string();r.get_mut(..1).unwrap().make_ascii_uppercase();r}else{replacement.to_string()};output.replace_range(start..start+phrase.len(),&replacement);from=start+replacement.len();
+        }
+    }
+    output
+}
+
 /// Resolve only supplied evidence IDs. Never guess or move a citation to a
 /// nearby timestamp based on the generated sentence's wording.
 pub fn resolve(answer: &str, passages: &[rag::SubLine]) -> String {
-    let normalized = knowledge_core::grounded_answer(answer, passages.len());
+    let normalized = grounded_answer(answer, passages.len());
     let mut output = String::new();
     let mut rest = normalized.as_str();
     while let Some(open) = rest.find('[') {

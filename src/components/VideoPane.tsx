@@ -6,7 +6,7 @@ import { formatTs } from "../lib/format";
 import UpdateDownloaderButton, { STALE_HINT } from "./UpdateDownloaderButton";
 import DesktopRuntime from "./DesktopRuntime";
 import { ANALYSES } from "../types";
-import type { ChunkPublic, IngestProgress, SavedSource, TranscriptCue, VideoMeta, VoiceSummary, WorkerStatus } from "../types";
+import type { ChunkPublic, IngestProgress, SentNote, TranscriptCue, VideoMeta, VoiceSummary, WorkerStatus } from "../types";
 
 export interface VideoPaneHandle {
   seekTo: (secs: number) => void;
@@ -65,7 +65,7 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
   const transcriptRef = useRef<HTMLDivElement>(null);
   const [activeRow, setActiveRow] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState<SavedSource | null>(null);
+  const [saved, setSaved] = useState<SentNote | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const currentId = useRef(meta.id);
   currentId.current = meta.id;
@@ -149,7 +149,7 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
     setSaving(true);
     setSaveError(null);
     try {
-      const result = await api.saveToArchive(id);
+      const result = await api.sendVideoToWizmuth(id);
       if (currentId.current === id) {
         setSaved(result);
       }
@@ -228,7 +228,7 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
         )}
         {meta.status === "ready" && (
           <button className="video-source-link archive-save" disabled={saving || busy} onClick={() => void saveSource()}>
-            {saving ? "Preserving source…" : saved ? "✓ Saved to SACRiNOMiCON" : "◇ Save to SACRiNOMiCON"}
+            {saving ? "Sending…" : saved ? "✓ In WiZMUTH" : "◇ Send to WiZMUTH"}
           </button>
         )}
         {distinctVoices.size > 0 && <p className="voice-summary">Voices by speaking time: {voices.filter((v) => distinctVoices.has(v.voice)).map((v) => `${v.voice} ${formatTs(v.seconds)}`).join(" · ")}. Automatic clusters, not identities.</p>}
@@ -245,8 +245,8 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
         </div>}
         {saved && (
           <div className="archive-receipt" role="status">
-            <span>{saved.evidenceCount} passages and {saved.artifactCount} original artifacts preserved in your Inbox.</span>
-            <button onClick={() => void revealItemInDir(saved.packagePath).catch((error) => setSaveError(String(error)))}>Show portable package ↗</button>
+            <span>The transcript is a note in WiZMUTH/Inbox, with every paragraph linked to its moment in the video.</span>
+            <button onClick={() => void revealItemInDir(saved.path).catch((error) => setSaveError(String(error)))}>Show note ↗</button>
           </div>
         )}
         {saveError && <p className="archive-save-error" role="alert">{saveError}</p>}

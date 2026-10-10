@@ -32,9 +32,7 @@ Omni 7B read the bank and account-name fields from a larger image, but its spoke
 
 Gemma's short-excerpt analysis was useful. Its full-transcript outline put the account-document discussion at 3:46-5:05, whereas the tested passage is around 6:30. Other topic ranges were also compressed or misplaced. Its summary must not become a source of authoritative timestamps. Source citations should be selected from actual cues or verified spans.
 
-The archive prototype was subsequently tested with the user's Baal spelling correction attached to a preserved passage in a temporary test library. Retrieval found the correction, while the original caption remained unchanged. Two Qwen3 4B answers still led with "Ball" before explaining the correction to "Baal." The broader answer also overstated what the excerpts establish about verification. A stronger prompt removed the earlier unsupported claim about scholarly consensus but did not solve consistent spelling or evidential restraint. These are failed accuracy gates, not evidence that the archive oracle is ready. See [broad-question output](results/archive-correction-broad.json) and [account-name output](results/archive-correction-name.json).
 
-The subsequent typed-correction implementation distinguishes original extraction, a human passage reading, and source-scoped spelling substitutions. Moving annotations first still failed, and correcting only one passage still let repeated automated spelling dominate the answer. A source-scoped `Ball` to `Baal` substitution made the direct answer lead with **Baal**, with raw evidence unchanged. However, the broader answer still misattributed an opposing quoted rebuttal to the main speaker and described "hobgoblins" as a disclaimer rather than the speaker's dismissal of opposition. Both updated answers also overstated what the excerpts establish about independent verification. Corrected spelling is progress; grounded attribution remains a failed gate. Generation took about 17 seconds per answer on this Mac. See [note-first failure](results/archive-correction-note-first-name.json), [single-reading failure](results/archive-corrected-reading-name.json), [source-spelling direct answer](results/archive-source-spelling-name-v2.json), and [source-spelling broad answer](results/archive-source-spelling-broad-v2.json). These checks ran against a copied temporary library.
 
 Default Gemma thinking consumed the small output budget before producing complete final answers. The saved thinking-mode runs demonstrate that configuration issue; subsequent runs explicitly disable thinking. Full-transcript output still reached the 1,100-token cap, so that answer is incomplete.
 
@@ -51,7 +49,7 @@ Default Gemma thinking consumed the small output budget before producing complet
 
 Keep Whisper and the current ingestion stack while developing an optional bounded Omni inspection path. Use separate transcript and visual outputs, prohibit filling redactions, and retain original artifacts for verification. Evaluate a supported quantized native audiovisual runtime before selecting Omni 7B for production.
 
-Gemma A4B is worth a desktop-only synthesis/chat option. Load it separately from ingestion models. It is not the phone archive model and does not automatically provide reliable citations or verified truth.
+Gemma A4B is worth a desktop-only synthesis/chat option. Load it separately from ingestion models. It does not automatically provide reliable citations or verified truth.
 
 Do not promise the two-hour/30-minute ingestion target from these tests. The native audiovisual examples took roughly 0.52 to 1.28 seconds per second of source media, depending on prompt and output length. Naive extrapolations are about 62 to 154 minutes for two hours, excluding loading, downloads, and other stages. This short-clip ratio is not a measured full-video throughput figure; longer batching, fewer output tokens, and optimized runtimes may change it. Selective deep inspection remains the practical direction to test.
 
@@ -66,4 +64,4 @@ Do not promise the two-hour/30-minute ingestion target from these tests. The nat
 - [Omni 7B original-resolution OCR answer](results/omni-7b-document-original.txt)
 - [Reproduction instructions](README.md)
 
-The initial Gemma/Omni trials did not change application code, existing indexes, or original media. Subsequent overhaul implementation is tracked in `docs/OVERHAUL.md`; archive correction checks use the integrated Oracle prompt and a temporary library. Roughly 31 GB of trial model artifacts are in the ignored `out/model-trial` directory. Python dependencies are isolated in `/private/tmp/youscoop-model-trial`.
+The initial Gemma/Omni trials did not change application code, existing indexes, or original media. Roughly 31 GB of trial model artifacts are in the ignored `out/model-trial` directory. Python dependencies are isolated in `/private/tmp/youscoop-model-trial`.

@@ -370,12 +370,31 @@ pub fn snap_citations(answer: &str, lines: &[SubLine]) -> String {
     out.replace(" .", ".").replace(" ,", ",").trim().to_string()
 }
 
+/// The screen kind a question asks to enumerate ("Which emails are shown?").
+pub fn listing_kind(question: &str) -> Option<&'static str> {
+    let q = format!(" {} ", question.to_lowercase());
+    let asks_for_all = [" which ", " list ", " all ", " every ", " what are the ", " how many ", " name the ", " show me the "].iter().any(|w| q.contains(w));
+    if !asks_for_all {
+        return None;
+    }
+    let kinds: [(&[&str], &str); 7] = [
+        (&[" email", " e-mail", " mails "], "Email"),
+        (&[" memo"], "Memo"),
+        (&[" wikipedia", " wiki "], "Wikipedia page"),
+        (&[" news", " headline", " articles "], "News article"),
+        (&[" search result", " google search"], "Search results"),
+        (&[" government document", " court document", ".gov"], "Government document"),
+        (&[" creator's note", " creators note", " notes from the creator", " notes the creator", " on-screen notes"], "Creator's note"),
+    ];
+    kinds.iter().find(|(words, _)| words.iter().any(|w| q.contains(w))).map(|(_, kind)| *kind)
+}
+
 /// For a question asking for every screen of a kind ("Which emails are
 /// shown?"): all on-screen passages labeled with that kind, in time order,
 /// each shortened so the list fits, plus a note for the prompt. None when the
 /// question is not a listing or the video has no such screens.
 pub fn listing(chunks: &[Chunk], question: &str, limit: usize) -> Option<(Vec<Chunk>, String)> {
-    let kind = knowledge_core::listing_kind(question)?;
+    let kind = listing_kind(question)?;
     let prefix = format!("[{kind}]");
     let mut found: Vec<Chunk> = chunks.iter().filter(|c| c.source == "ocr" && c.text.starts_with(&prefix)).cloned().collect();
     if found.is_empty() {

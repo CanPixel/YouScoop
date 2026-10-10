@@ -289,7 +289,7 @@ async fn do_download(
 
     let got = std::fs::metadata(&part_path)?.len();
     let digest_ok = match spec.sha256 {
-        Some(expected) if got == total => knowledge_core::file_digest(&part_path)?.0 == expected,
+        Some(expected) if got == total => crate::digest::file_digest(&part_path)?.0 == expected,
         _ => true,
     };
     if !digest_ok {

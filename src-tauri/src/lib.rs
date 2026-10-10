@@ -1,6 +1,6 @@
 pub mod investigation;
 pub mod llm;
-pub mod archive;
+mod digest;
 mod media;
 mod onscreen;
 mod spelling;
@@ -12,6 +12,7 @@ mod state;
 pub mod store;
 pub mod stt;
 mod vtt;
+mod wizmuth;
 mod ytdlp;
 mod desktop_worker;
 mod runtime_setup;
@@ -19,9 +20,9 @@ mod runtime_setup;
 pub use runtime_setup::verify_desktop_setup;
 
 /// Run voice separation and on-screen text on one library video without a
-/// window, then save it into an isolated archive. Used for native verification.
+/// window. Used for native verification.
 #[cfg(feature = "diagnostics")]
-pub fn verify_enrichment(video_id: &str, archive_root: &std::path::Path) -> anyhow::Result<serde_json::Value> {
+pub fn verify_enrichment(video_id: &str) -> anyhow::Result<serde_json::Value> {
     let mut context = app_context();
     context.config_mut().app.windows.clear();
     let app = tauri::Builder::default().build(context)?;
@@ -38,14 +39,11 @@ pub fn verify_enrichment(video_id: &str, archive_root: &std::path::Path) -> anyh
         let mut sources = std::collections::BTreeMap::<String, usize>::new();
         for chunk in &index { *sources.entry(chunk.source.clone()).or_default() += 1; }
         let dir = store::video_dir_path(&handle, video_id)?;
-        let saved = archive::save_to(&dir, &archive_root.join("exports"), &archive_root.join("library"))?;
         Ok(serde_json::json!({
             "analysis": meta.analysis, "elapsedSeconds": elapsed, "indexBySource": sources,
             "voices": voices::load(&dir).map(|v| v.voices),
             "screens": onscreen::load(&dir).map(|r| r.screens.len()),
             "spellings": spelling::load(&dir),
-            "archive": saved.archive_path, "package": saved.package_path,
-            "evidenceCount": saved.evidence_count, "artifactCount": saved.artifact_count,
         }))
     })
 }
@@ -69,8 +67,13 @@ fn err_str(e: impl std::fmt::Display) -> String {
 // ---------- Setup / models ----------
 
 #[tauri::command]
-async fn save_to_archive(app: AppHandle, id: String) -> CmdResult<archive::SavedSource> {
-    tauri::async_runtime::spawn_blocking(move || archive::save(&app,&id))
+async fn send_video_to_wizmuth(app: AppHandle, id: String, today: String) -> CmdResult<wizmuth::SentNote> {
+    tauri::async_runtime::spawn_blocking(move || wizmuth::send_video(&app, &id, &today))
+        .await.map_err(err_str)?.map_err(err_str)
+}
+#[tauri::command]
+async fn send_answer_to_wizmuth(app: AppHandle, id: String, question: String, answer: String, today: String) -> CmdResult<wizmuth::SentNote> {
+    tauri::async_runtime::spawn_blocking(move || wizmuth::send_answer(&app, &id, &question, &answer, &today))
         .await.map_err(err_str)?.map_err(err_str)
 }
 
@@ -524,7 +527,8 @@ pub fn run() {
             runtime_setup::install_desktop_model,
             desktop_worker::ask_gemma,
             desktop_worker::stop_worker,
-            save_to_archive,
+            send_video_to_wizmuth,
+            send_answer_to_wizmuth,
             setup_status,
             download_model,
             update_ytdlp,

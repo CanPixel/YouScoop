@@ -785,10 +785,6 @@ const SCENE_PROMPT_VERSION: &str = "4";
 fn scene_descriptions_current(dir: &std::path::Path) -> bool {
     std::fs::read_to_string(dir.join("descriptions.version")).is_ok_and(|v| v.lines().next().map(str::trim) == Some(SCENE_PROMPT_VERSION))
 }
-/// The frame model recorded with a video's descriptions.
-pub fn frame_model_label(dir: &std::path::Path) -> String {
-    std::fs::read_to_string(dir.join("descriptions.version")).ok().and_then(|v| v.lines().nth(1).map(str::to_string)).unwrap_or_else(|| "SmolVLM2-2.2B-Instruct Q4_K_M".into())
-}
 pub fn needs_enrichment(meta: &VideoMeta) -> bool {
     ANALYSES.iter().any(|a| !meta.analysis.iter().any(|done| done == a))
 }

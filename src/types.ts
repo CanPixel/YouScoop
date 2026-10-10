@@ -44,12 +44,10 @@ export interface VideoDetail {
 export interface WorkerConfig { python: string; gemmaModel: string }
 export interface WorkerStatus { config: WorkerConfig; runtimeReady: boolean; uvAvailable: boolean; cachedGemma: string | null; gemmaReady: boolean }
 
-export interface SavedSource {
-  sourceId: string;
-  packagePath: string;
-  archivePath: string;
-  evidenceCount: number;
-  artifactCount: number;
+/** A note YouScoop wrote into the WiZMUTH vault's inbox. */
+export interface SentNote {
+  path: string;
+  vault: string;
 }
 
 export interface SourceRef {

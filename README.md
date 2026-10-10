@@ -11,7 +11,7 @@ YouScoop is a macOS desktop app that downloads a YouTube video, reads its transc
 
 Everything runs on-device (Apple Silicon / Metal). No accounts, no API keys, no cloud calls after the one-time model download.
 
-The overhaul adds a separate **SACRiNOMiCON** desktop/mobile archive. YouScoop owns video playback and processing; the archive owns Oracle conversation, Library, and concept exploration. See [running the two apps](docs/RUNNING.md) for the current workflow, [model decision](docs/MODEL-DECISION.md) for the Gemini fact check, and [verification status](docs/VERIFICATION.md) for demonstrated behavior and remaining work. The model table below describes the original small-model pipeline; the optional desktop workers additionally use native Omni on PyTorch MPS and Gemma on MLX.
+YouScoop can send a video's transcript, or a single chat answer, as a Markdown note into the vault of **WiZMUTH**, a separate local app for talking with your notes (its own project). See [running the two apps](docs/RUNNING.md) for the current workflow, [model decision](docs/MODEL-DECISION.md) for the Gemini fact check, and [verification status](docs/VERIFICATION.md) for demonstrated behavior and remaining work. The model table below describes the original small-model pipeline; the optional desktop workers additionally use native Omni on PyTorch MPS and Gemma on MLX.
 
 ## Features
 

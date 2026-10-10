@@ -10,10 +10,13 @@ import type {
   SetupStatus,
   VideoDetail,
   VideoMeta,
-  SavedSource,
+  SentNote,
   WorkerStatus,
   WorkerConfig,
 } from "./types";
+
+/** Local date as 2026-10-10, for note front matter. */
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 export const api = {
   setupStatus: () => invoke<SetupStatus>("setup_status"),
@@ -22,7 +25,8 @@ export const api = {
   loadEngine: () => invoke<void>("load_engine"),
   library: () => invoke<VideoMeta[]>("library"),
   videoDetail: (id: string) => invoke<VideoDetail>("video_detail", { id }),
-  saveToArchive: (id: string) => invoke<SavedSource>("save_to_archive", { id }),
+  sendVideoToWizmuth: (id: string) => invoke<SentNote>("send_video_to_wizmuth", { id, today: today() }),
+  sendAnswerToWizmuth: (id: string, question: string, answer: string) => invoke<SentNote>("send_answer_to_wizmuth", { id, question, answer, today: today() }),
   addVideo: (url: string) => invoke<void>("add_video", { url }),
   retryVideo: (id: string) => invoke<void>("retry_video", { id }),
   updateAnalysis: (id: string) => invoke<void>("update_analysis", { id }),
