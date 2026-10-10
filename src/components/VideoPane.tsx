@@ -3,6 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { api } from "../api";
 import { formatTs } from "../lib/format";
+import { visibleVoices } from "../lib/voices";
 import UpdateDownloaderButton, { STALE_HINT } from "./UpdateDownloaderButton";
 import DesktopRuntime from "./DesktopRuntime";
 import { ANALYSES } from "../types";
@@ -69,14 +70,7 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
   const [saveError, setSaveError] = useState<string | null>(null);
   const currentId = useRef(meta.id);
   currentId.current = meta.id;
-  // Voice separation often splits one narrator into several small clusters.
-  // A voice is distinct with a tenth of the speaking time or three minutes;
-  // with fewer than two distinct voices, naming them only adds noise.
-  const distinctVoices = useMemo(() => {
-    const total = voices.reduce((sum, v) => sum + v.seconds, 0);
-    const distinct = voices.filter((v) => v.seconds >= 180 || v.seconds >= total * 0.1);
-    return new Set(distinct.length >= 2 ? distinct.map((v) => v.voice) : []);
-  }, [voices]);
+  const distinctVoices = useMemo(() => visibleVoices(voices), [voices]);
   const entries = useMemo(() => {
     const speech: (ChunkPublic & { voice?: string | null })[] = transcript.length
       ? transcript.map((cue) => ({ ...cue, source: "speech" }))
