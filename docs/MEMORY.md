@@ -1,6 +1,6 @@
 # Model memory coordination
 
-YouScoop and SACRiNOMiCON share a desktop inference coordinator in `~/Library/Application Support/.sacrinomicon-inference`. The two applications can remain open while a large investigation runs. Idle archive and YouScoop models release their weights before Omni or Gemma loads. Browsing, transcript inspection and archive navigation do not require resident models.
+YouScoop and SACRiNOMiCON share a desktop inference coordinator in `~/Library/Application Support/.sacrinomicon-inference`. The two applications can remain open while a large investigation runs. Idle archive and YouScoop models release their weights before Gemma loads. Browsing, transcript inspection and archive navigation do not require resident models.
 
 Active small-model work holds a shared intent lease. Resident weights hold a separate shared activity lease. A large worker first obtains exclusive intent, allowing active work to finish and preventing new small-model admission. Each application's idle watcher then drops its model and activity lease. The large worker obtains exclusive activity before spawning Python. These leases are OS file locks, so an abandoned file is not a stale ownership record.
 

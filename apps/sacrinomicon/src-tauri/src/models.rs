@@ -20,7 +20,7 @@ pub struct ModelSpec {
     pub sha256: &'static str,
 }
 
-pub const MODELS: [ModelSpec; 3] = [
+pub const MODELS: [ModelSpec; 4] = [
     ModelSpec {
         id: "voice", label: "Whisper small Q5_1", detail: "Optional offline voice transcription, loaded only in voice mode",
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/3e251d613ae82c33b1dcca9f0406c697c3f9d083/ggml-small-q5_1.bin",
@@ -43,6 +43,15 @@ pub const MODELS: [ModelSpec; 3] = [
         file: "bge-small-en-v1.5-q8_0.gguf",
         bytes: 36_806_944,
         sha256: "ec38e8da142596baa913124ae50550de284b6916bf59577ef2f0cb9660c2f514",
+    },
+    ModelSpec {
+        id: "speech",
+        label: "Kokoro voice",
+        detail: "The Oracle's spoken voice: offline neural speech, unpacked on first use (macOS)",
+        url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-en-v0_19.tar.bz2",
+        file: "kokoro-en-v0_19.tar.bz2",
+        bytes: 319_625_534,
+        sha256: "912804855a04745fa77a30be545b3f9a5d15c4d66db00b88cbcd4921df605ac7",
     },
 ];
 

@@ -1,0 +1,49 @@
+{
+ "firstRun": {
+  "analysis": [
+   "voices",
+   "onscreen"
+  ],
+  "artifactCount": 161,
+  "elapsedSeconds": 273.607079292,
+  "evidenceCount": 205,
+  "indexBySource": {
+   "audiovisual": 12,
+   "ocr": 90,
+   "speech": 55,
+   "vision": 60
+  },
+  "screens": 90,
+  "voices": [
+   {
+    "seconds": 1859.7,
+    "voice": "Voice A"
+   },
+   {
+    "seconds": 67.5,
+    "voice": "Voice B"
+   },
+   {
+    "seconds": 0.8,
+    "voice": "Voice C"
+   },
+   {
+    "seconds": 0.3,
+    "voice": "Voice D"
+   }
+  ]
+ },
+ "afterRegroupingAndVoiceOnsetRule": {
+  "indexBySource": {
+   "audiovisual": 12,
+   "ocr": 61,
+   "speech": 57,
+   "vision": 60
+  },
+  "evidenceCount": 178,
+  "artifactCount": 132,
+  "note": "Screens regrouped from saved OCR samples; speech re-chunked from saved voice turns. Elapsed under one second each."
+ },
+ "source": "kVReoK-UBJA, 32:45",
+ "machine": "Apple M5 Pro, 24 GB"
+}

@@ -7,17 +7,7 @@ import Sidebar from "./components/Sidebar";
 import VideoPane, { type VideoPaneHandle } from "./components/VideoPane";
 import ChatPane from "./components/ChatPane";
 import DesktopRuntime from "./components/DesktopRuntime";
-import type {
-  ChatMessage,
-  ChunkPublic,
-  TranscriptCue,
-  IngestProgress,
-  ModelProgress,
-  SetupStatus,
-  VideoMeta,
-  WorkerStatus,
-  OmniMoment,
-} from "./types";
+import type { ChatMessage, ChunkPublic, TranscriptCue, IngestProgress, ModelProgress, SetupStatus, VideoMeta, WorkerStatus, VoiceSummary } from "./types";
 
 const REQUIRED_MODELS = ["vlm", "mmproj", "embed", "chat"];
 const CHATS_KEY = "youscoop-chats-v1";
@@ -38,10 +28,10 @@ export default function App() {
   const [modelProgress, setModelProgress] = useState<Record<string, ModelProgress>>({});
   const [engineError, setEngineError] = useState<string | null>(null);
 
-  const [moments, setMoments] = useState<Record<string, OmniMoment[]>>({});
   const [videos, setVideos] = useState<VideoMeta[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [transcripts, setTranscripts] = useState<Record<string, TranscriptCue[]>>({});
+  const [voices, setVoices] = useState<Record<string, VoiceSummary[]>>({});
   const [chunks, setChunks] = useState<Record<string, ChunkPublic[]>>({});
   const [ingest, setIngest] = useState<Record<string, IngestProgress>>({});
 
@@ -49,7 +39,6 @@ export default function App() {
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
   const [worker, setWorker] = useState<WorkerStatus | null>(null);
   const [chatModel, setChatModel] = useState<"qwen" | "gemma">("qwen");
-  const [inspectingFor, setInspectingFor] = useState<string | null>(null);
   const [workerProgress, setWorkerProgress] = useState("");
   const [inferenceStatus, setInferenceStatus] = useState("");
   const refreshWorker = useCallback(() => {
@@ -83,8 +72,8 @@ export default function App() {
   const fetchDetail = useCallback(async (id: string) => {
     try {
       const detail = await api.videoDetail(id);
-      setMoments((prev) => ({ ...prev, [id]: detail.moments }));
       setTranscripts((prev) => ({ ...prev, [id]: detail.transcript }));
+      setVoices((prev) => ({ ...prev, [id]: detail.voices }));
       setChunks((prev) => ({ ...prev, [id]: detail.chunks }));
       setVideos((prev) => prev.map((v) => (v.id === id ? detail.meta : v)));
       return detail;
@@ -333,38 +322,14 @@ export default function App() {
             meta={selected}
             chunks={chunks[selected.id] ?? []}
             transcript={transcripts[selected.id] ?? []}
-            moments={moments[selected.id] ?? []}
+            voices={voices[selected.id] ?? []}
             ingest={ingest[selected.id]}
             onCancelIngest={() => void api.cancelIngest(selected.id)}
+            onUpdateAnalysis={() => api.updateAnalysis(selected.id)}
             onRetry={() => retryVideo(selected.id)}
             worker={worker}
             onWorkerChanged={refreshWorker}
-            busy={generatingFor !== null || inspectingFor !== null}
-            inspectionStatus={workerProgress}
-            onInspectSource={async () => {
-              const before = moments[selected.id]?.length ?? 0;
-              setInspectingFor(selected.id); setWorkerProgress("Planning selected audiovisual moments");
-              let error: string | undefined;
-              try { await api.inspectSource(selected.id); }
-              catch (cause) { error = String(cause); }
-              const detail = await fetchDetail(selected.id);
-              setInspectingFor(null);
-              return { changed: detail ? detail.moments.length > before : true, error };
-            }}
-            onReviewMoment={async (start, end, text) => {
-              await api.reviewMoment(selected.id, start, end, text);
-              await fetchDetail(selected.id);
-            }}
-            onRemoveReviewedMoment={async (start, end) => {
-              await api.removeReviewMoment(selected.id, start, end);
-              await fetchDetail(selected.id);
-            }}
-            onInspect={async (start, question) => {
-              setInspectingFor(selected.id);
-              setWorkerProgress("Preparing audiovisual inspection");
-              try { await api.inspectMoment(selected.id, start, question); await fetchDetail(selected.id); }
-              finally { setInspectingFor(null); }
-            }}
+            busy={generatingFor !== null}
           />
           <ChatPane
             meta={selected}
@@ -373,7 +338,7 @@ export default function App() {
             progress={chatModel === "gemma" ? workerProgress : inferenceStatus}
             engineError={engineError}
             onRetryEngine={() => { setEngineError(null); void api.loadEngine().catch((e) => setEngineError(String(e))); }}
-            blocked={inspectingFor !== null || (generatingFor !== null && generatingFor !== selected.id)}
+            blocked={generatingFor !== null && generatingFor !== selected.id}
             model={chatModel}
             onModelChange={setChatModel}
             gemmaReady={worker?.gemmaReady ?? false}

@@ -34,7 +34,7 @@ Downloaded once from Hugging Face into `~/Library/Application Support/com.canpix
 | Embeddings | bge-small-en-v1.5 Q8_0 (CPU) | ~35 MB |
 | Transcription fallback | Whisper large-v3-turbo Q5_0 (on demand) | ~570 MB |
 
-The original small-model pipeline uses `llama.cpp` (via `llama-cpp-2`, Metal + mtmd) and `whisper.cpp` (via a vendored `whisper-rs` fork - see below). Optional Omni inspection uses PyTorch MPS, and Gemma chat uses MLX.
+The original small-model pipeline uses `llama.cpp` (via `llama-cpp-2`, Metal + mtmd) and `whisper.cpp` (via a vendored `whisper-rs` fork - see below). Optional Gemma chat uses MLX.
 
 ## Requirements
 

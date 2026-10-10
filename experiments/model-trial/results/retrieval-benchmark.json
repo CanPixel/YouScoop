@@ -1,0 +1,862 @@
+{
+ "before": {
+  "hitAt6": 21,
+  "hitAtK": 21,
+  "meanReciprocalRank": 0.955,
+  "meanSearchMs": 2.8,
+  "nearDuplicatePairs": 19,
+  "passages": 12,
+  "questions": 22,
+  "relevantPassagesInTopK": 73,
+  "rows": [
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document"
+    ],
+    "question": "What was the bank account called according to the speaker?",
+    "relevantInTop": 4
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Document",
+     "Visual",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document"
+    ],
+    "question": "What does the wire transfer memorandum say?",
+    "relevantInTop": 2
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "Who is Ian Carroll and what does he claim?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What is the argument that Baal is an OCR error?",
+    "relevantInTop": 1
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What did Putin say about the Western elites?",
+    "relevantInTop": 2
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Document"
+    ],
+    "question": "What is Moloch associated with?",
+    "relevantInTop": 12
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Visual",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document"
+    ],
+    "question": "Which email mentions a torture video?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": null,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document"
+    ],
+    "question": "What did Larry Summers write to Epstein?",
+    "relevantInTop": 0
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Visual",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document"
+    ],
+    "question": "What email involves Ehud Barak?",
+    "relevantInTop": 1
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Visual",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document"
+    ],
+    "question": "What does the Rothschild email say?",
+    "relevantInTop": 4
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What is said about Isaac Kappy?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Document"
+    ],
+    "question": "What is the Dome of the Rock?",
+    "relevantInTop": 5
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Document"
+    ],
+    "question": "How are the Phoenicians related to the Canaanites?",
+    "relevantInTop": 7
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech"
+    ],
+    "question": "What is the bath house connection?",
+    "relevantInTop": 6
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Visual"
+    ],
+    "question": "What does as above so below mean?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document"
+    ],
+    "question": "What is said about Epstein, Russia and the KGB?",
+    "relevantInTop": 4
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What happens with Elijah and the prophets of Baal?",
+    "relevantInTop": 4
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Document",
+     "Speech"
+    ],
+    "question": "What does the victim's account describe?",
+    "relevantInTop": 1
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Visual",
+     "Speech",
+     "Speech",
+     "Visual",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document"
+    ],
+    "question": "Where can the full video be watched?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What does the speaker say about spiritual warfare?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Visual",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document"
+    ],
+    "question": "What did the email to Martin Nowak say?",
+    "relevantInTop": 1
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "How does the presenter respond to the claim that Epstein had no Baal account?",
+    "relevantInTop": 1
+   }
+  ]
+ },
+ "after": {
+  "hitAt6": 22,
+  "hitAtK": 22,
+  "meanReciprocalRank": 0.947,
+  "meanSearchMs": 7.8,
+  "nearDuplicatePairs": 0,
+  "passages": 12,
+  "questions": 22,
+  "relevantPassagesInTopK": 72,
+  "rows": [
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech"
+    ],
+    "question": "What was the bank account called according to the speaker?",
+    "relevantInTop": 6
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Visual",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document"
+    ],
+    "question": "What does the wire transfer memorandum say?",
+    "relevantInTop": 2
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "Who is Ian Carroll and what does he claim?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Visual"
+    ],
+    "question": "What is the argument that Baal is an OCR error?",
+    "relevantInTop": 2
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What did Putin say about the Western elites?",
+    "relevantInTop": 2
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Document",
+     "Document"
+    ],
+    "question": "What is Moloch associated with?",
+    "relevantInTop": 7
+   },
+   {
+    "firstRelevantRank": 3,
+    "kinds": [
+     "Document",
+     "Visual",
+     "Document",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech"
+    ],
+    "question": "Which email mentions a torture video?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What did Larry Summers write to Epstein?",
+    "relevantInTop": 2
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Visual",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Document"
+    ],
+    "question": "What email involves Ehud Barak?",
+    "relevantInTop": 1
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Visual",
+     "Document",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Document"
+    ],
+    "question": "What does the Rothschild email say?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What is said about Isaac Kappy?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech"
+    ],
+    "question": "What is the Dome of the Rock?",
+    "relevantInTop": 4
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Document",
+     "Speech"
+    ],
+    "question": "How are the Phoenicians related to the Canaanites?",
+    "relevantInTop": 6
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Document"
+    ],
+    "question": "What is the bath house connection?",
+    "relevantInTop": 6
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Visual"
+    ],
+    "question": "What does as above so below mean?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What is said about Epstein, Russia and the KGB?",
+    "relevantInTop": 5
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What happens with Elijah and the prophets of Baal?",
+    "relevantInTop": 4
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document"
+    ],
+    "question": "What does the victim's account describe?",
+    "relevantInTop": 1
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Visual",
+     "Visual",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Visual"
+    ],
+    "question": "Where can the full video be watched?",
+    "relevantInTop": 4
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Speech"
+    ],
+    "question": "What does the speaker say about spiritual warfare?",
+    "relevantInTop": 3
+   },
+   {
+    "firstRelevantRank": 1,
+    "kinds": [
+     "Document",
+     "Document",
+     "Visual",
+     "Speech",
+     "Document",
+     "Speech",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Speech",
+     "Document"
+    ],
+    "question": "What did the email to Martin Nowak say?",
+    "relevantInTop": 1
+   },
+   {
+    "firstRelevantRank": 2,
+    "kinds": [
+     "Speech",
+     "Document",
+     "Document",
+     "Speech",
+     "Speech",
+     "Speech",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Document",
+     "Speech"
+    ],
+    "question": "How does the presenter respond to the claim that Epstein had no Baal account?",
+    "relevantInTop": 1
+   }
+  ]
+ }
+}

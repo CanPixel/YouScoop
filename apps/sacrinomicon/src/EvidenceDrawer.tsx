@@ -8,6 +8,8 @@ import type { Evidence, Library, SourceDetail } from "./types";
 export const timestamp = (seconds: number) => {
   const s = Math.floor(seconds); return s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
+/** The voice label YouScoop puts at the start of voice-separated speech. */
+export const voiceOf = (text: string) => /^\[(Voice [A-Z0-9]{1,3})\]/.exec(text)?.[1] ?? null;
 export default function EvidenceDrawer({ evidence, library, onClose, onChanged }: { evidence: Evidence; library: Library; onClose: () => void; onChanged: () => void }) {
   const drawer = useRef<HTMLElement>(null);
   const closeRef = useRef(onClose);
@@ -53,7 +55,7 @@ export default function EvidenceDrawer({ evidence, library, onClose, onChanged }
     void api.source(evidence.sourceId).then(async (source) => {
       if (!active) return;
       setDetail(source);
-      const original = source.assets.find((a) => a.id === evidence.provenance.originalAsset && a.kind === "keyframe");
+      const original = source.assets.find((a) => a.id === evidence.provenance.originalAsset && (a.kind === "keyframe" || a.kind === "ocr_frame"));
       if (original) {
         const path = await api.assetPath(evidence.sourceId, original.id);
         if (active) setMedia({ src: convertFileSrc(path), kind: original.kind });
@@ -66,8 +68,10 @@ export default function EvidenceDrawer({ evidence, library, onClose, onChanged }
   return <aside ref={drawer} className="evidence-drawer" role="dialog" aria-modal="true" aria-label="Preserved evidence">
     <header><span className="eyebrow">Preserved passage</span><button aria-label="Close evidence" onClick={onClose}>×</button></header>
     <h2>{detail?.source.title ?? library.sources.find((s) => s.id === evidence.sourceId)?.title}</h2>
-    <div className="passage-meta">{timestamp(evidence.start)} to {timestamp(evidence.end)} · {evidence.kind}</div>
-    {media?.kind === "keyframe" && <img src={media.src} alt={`Preserved frame at ${timestamp(evidence.start)}`} />}
+    <div className="passage-meta">{timestamp(evidence.start)} to {timestamp(evidence.end)} · {evidence.kind === "document" ? "on-screen text" : evidence.kind}{voiceOf(evidence.text) && ` · ${voiceOf(evidence.text)}`}</div>
+    {media && <img src={media.src} alt={media.kind === "ocr_frame" ? `Frame the on-screen text was read from, at ${timestamp(evidence.start)}` : `Preserved frame at ${timestamp(evidence.start)}`} />}
+    {evidence.kind === "document" && <p className="muted">Read by machine OCR from the frame above. Compare the text with the image: characters can be misread or cut off at the edges, and showing a document does not authenticate it.</p>}
+    {voiceOf(evidence.text) && <p className="muted">Voice labels are automatic voice clusters within this source, ordered by speaking time. They are not identities.</p>}
     <p className="eyebrow">Original extraction</p><blockquote>{evidence.text}</blockquote>
     {oracleReading !== null && oracleReading !== evidence.text && <><p className="eyebrow">Oracle reading · your corrections</p><blockquote>{oracleReading}</blockquote></>}
     <p className="provenance">{evidence.provenance.method.replaceAll("_", " ")}<br />{evidence.provenance.model ?? "Source captions"}<br />Recorded {new Date(evidence.provenance.generatedAt * 1000).toLocaleDateString()}</p>

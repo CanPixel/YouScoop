@@ -1,8 +1,10 @@
-mod batch_inspection;
-mod investigation;
+pub mod investigation;
 pub mod llm;
 pub mod archive;
 mod media;
+mod onscreen;
+mod spelling;
+pub mod voices;
 mod models;
 mod pipeline;
 pub mod rag;
@@ -15,6 +17,38 @@ mod desktop_worker;
 mod runtime_setup;
 #[cfg(feature = "diagnostics")]
 pub use runtime_setup::verify_desktop_setup;
+
+/// Run voice separation and on-screen text on one library video without a
+/// window, then save it into an isolated archive. Used for native verification.
+#[cfg(feature = "diagnostics")]
+pub fn verify_enrichment(video_id: &str, archive_root: &std::path::Path) -> anyhow::Result<serde_json::Value> {
+    let mut context = app_context();
+    context.config_mut().app.windows.clear();
+    let app = tauri::Builder::default().build(context)?;
+    let handle = app.handle().clone();
+    let state = Arc::new(AppState::new());
+    tauri::async_runtime::block_on(async {
+        let scope = memory::normal(&handle, &state, Arc::new(std::sync::atomic::AtomicBool::new(false))).await?;
+        ensure_engine(&handle, &state, &scope.admission).await.map_err(anyhow::Error::msg)?;
+        let mut meta = store::load_meta(&handle, video_id)?;
+        let started = std::time::Instant::now();
+        pipeline::enrich(&handle, &state, &mut meta, &Arc::new(std::sync::atomic::AtomicBool::new(false))).await?;
+        let elapsed = started.elapsed().as_secs_f64();
+        let index = store::load_index(&handle, video_id)?;
+        let mut sources = std::collections::BTreeMap::<String, usize>::new();
+        for chunk in &index { *sources.entry(chunk.source.clone()).or_default() += 1; }
+        let dir = store::video_dir_path(&handle, video_id)?;
+        let saved = archive::save_to(&dir, &archive_root.join("exports"), &archive_root.join("library"))?;
+        Ok(serde_json::json!({
+            "analysis": meta.analysis, "elapsedSeconds": elapsed, "indexBySource": sources,
+            "voices": voices::load(&dir).map(|v| v.voices),
+            "screens": onscreen::load(&dir).map(|r| r.screens.len()),
+            "spellings": spelling::load(&dir),
+            "archive": saved.archive_path, "package": saved.package_path,
+            "evidenceCount": saved.evidence_count, "artifactCount": saved.artifact_count,
+        }))
+    })
+}
 mod memory;
 
 use std::sync::atomic::Ordering;
@@ -193,8 +227,17 @@ fn library(app: AppHandle) -> CmdResult<Vec<VideoMeta>> {
 struct VideoDetail {
     meta: VideoMeta,
     chunks: Vec<ChunkPublic>,
-    transcript: Vec<vtt::Cue>,
-    moments: Vec<desktop_worker::Moment>,
+    transcript: Vec<TranscriptCue>,
+    /// Speaking time per voice, when voice separation ran.
+    voices: Vec<voices::VoiceSummary>,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TranscriptCue {
+    start: f64,
+    end: f64,
+    text: String,
+    voice: Option<String>,
 }
 
 #[tauri::command]
@@ -203,9 +246,15 @@ fn video_detail(app: AppHandle, id: String) -> CmdResult<VideoDetail> {
     let chunks = store::load_index(&app, &id)
         .map(|cs| cs.iter().map(ChunkPublic::from).collect())
         .unwrap_or_default();
-    let transcript = store::load_cues(&app, &id).unwrap_or_default();
-    let moments = desktop_worker::moments(&app,&id).map_err(err_str)?;
-    Ok(VideoDetail { meta, chunks, transcript, moments })
+    let cues = store::load_cues(&app, &id).unwrap_or_default();
+    let record = store::video_dir_path(&app, &id).ok().and_then(|dir| voices::load(&dir));
+    let assigned = record.as_ref().map(|r| voices::assign(&cues, &r.turns)).unwrap_or_default();
+    let transcript = cues
+        .into_iter()
+        .enumerate()
+        .map(|(i, c)| TranscriptCue { start: c.start, end: c.end, text: c.text, voice: assigned.get(i).cloned().flatten() })
+        .collect();
+    Ok(VideoDetail { meta, chunks, transcript, voices: record.map(|r| r.voices).unwrap_or_default() })
 }
 
 /// Wait for the engine, then run the given ingest future; engine-load
@@ -260,6 +309,20 @@ fn retry_video(app: AppHandle, state: State<'_, Arc<AppState>>, id: String) -> C
     spawn_ingest(app, state.inner().clone(), move |app, state| {
         pipeline::resume(app, state, meta)
     });
+    Ok(())
+}
+
+/// Add voice separation and on-screen text to a ready video, keeping it usable.
+#[tauri::command]
+fn update_analysis(app: AppHandle, state: State<'_, Arc<AppState>>, id: String) -> CmdResult<()> {
+    let meta = store::load_meta(&app, &id).map_err(err_str)?;
+    if meta.status != "ready" {
+        return Err("Finish processing the video first.".into());
+    }
+    if !pipeline::needs_enrichment(&meta) {
+        return Err("This video's analysis is already up to date.".into());
+    }
+    spawn_ingest(app, state.inner().clone(), move |app, state| pipeline::update_analysis(app, state, meta));
     Ok(())
 }
 
@@ -393,8 +456,17 @@ async fn ask_video(
             .into_iter()
             .next()
             .ok_or_else(|| anyhow::anyhow!("query embedding failed"))?;
-        let excerpts = rag::retrieve(&chunks, &query_vec, &retrieval_q, 6);
-        let prompt = rag::build_chat_prompt(&meta, &excerpts, &history, &q);
+        // "Which emails are shown?" needs every email screen, not the six most similar passages.
+        let listed = rag::listing(&chunks, &q, 16);
+        let excerpts: Vec<&store::Chunk> = match &listed {
+            Some((found, _)) => found.iter().collect(),
+            None => rag::retrieve(&chunks, &query_vec, &retrieval_q, 6),
+        };
+        let asked = match &listed {
+            Some((_, note)) => format!("{q}\n\n{note}"),
+            None => q.clone(),
+        };
+        let prompt = rag::build_chat_prompt(&meta, &excerpts, &history, &asked);
         let sources: Vec<SourceRef> = excerpts
             .iter()
             .map(|c| SourceRef {
@@ -411,7 +483,8 @@ async fn ask_video(
                 &ChatToken { video_id: vid.clone(), token: piece.to_string() },
             );
         };
-        let answer = engine.chat(&prompt, 512, &cancel, &mut on_token)?;
+        // A complete list needs more room than a direct answer.
+        let answer = engine.chat(&prompt, if listed.is_some() { 1100 } else { 512 }, &cancel, &mut on_token)?;
         // The model streams its own citations, which it routinely points at the
         // wrong excerpt line. Re-point them against the lines it was actually
         // shown before returning; the frontend replaces the streamed text with
@@ -449,10 +522,6 @@ pub fn run() {
             desktop_worker::configure_worker,
             runtime_setup::setup_desktop_runtime,
             runtime_setup::install_desktop_model,
-            desktop_worker::inspect_moment,
-            desktop_worker::review_moment,
-            desktop_worker::remove_review_moment,
-            batch_inspection::inspect_source,
             desktop_worker::ask_gemma,
             desktop_worker::stop_worker,
             save_to_archive,
@@ -465,6 +534,7 @@ pub fn run() {
             add_video,
             add_local_video,
             retry_video,
+            update_analysis,
             cancel_ingest,
             remove_video,
             ask_video,

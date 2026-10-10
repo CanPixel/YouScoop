@@ -29,7 +29,8 @@ pub fn resident(
 pub fn release_if_empty(state: &Arc<AppState>) -> CmdResult<()> {
     let engine = state.engine.lock().map_err(err)?;
     let speech = state.speech.lock().map_err(err)?;
-    if engine.is_none() && speech.is_none() {
+    let voice = state.voice.lock().map_err(err)?;
+    if engine.is_none() && speech.is_none() && voice.is_none() {
         *state.memory_resident.lock().map_err(err)? = None;
     }
     Ok(())
@@ -41,11 +42,15 @@ pub fn yield_if_idle(state: &Arc<AppState>) -> bool {
     let Ok(mut speech) = state.speech.try_lock() else {
         return false;
     };
+    let Ok(mut voice) = state.voice.try_lock() else {
+        return false;
+    };
     let Ok(mut lease) = state.memory_resident.lock() else {
         return false;
     };
     *engine = None;
     *speech = None;
+    *voice = None;
     *lease = None;
     true
 }

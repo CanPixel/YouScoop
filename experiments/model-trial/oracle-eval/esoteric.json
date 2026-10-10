@@ -1,0 +1,9 @@
+[
+  {"id": "greeting", "question": "Hello, who are you?", "expect": "Brief in-character greeting; names what the archive holds; invites a question; no citations"},
+  {"id": "pattern", "question": "What patterns connect Baal, Moloch and child sacrifice in this archive?", "lens": "esoteric", "expect": "Archive layer cited (the video's claims); tradition layer uncited and named as tradition; concise"},
+  {"id": "bathhouse", "question": "What is the occult significance of the bath house?", "lens": "esoteric", "expect": "What the video says about bath houses (Hammam Yalbugha, Baal temple bath houses) cited; esoteric reading uncited"},
+  {"id": "vampire", "question": "Why does the video call the elites vampiric?", "expect": "Putin's 'vampire's ball' remark and the presenter's literal reading, cited; concise"},
+  {"id": "followup", "question": "Why would he say that?", "history": [["Who is the presenter arguing with about the bank account?", "The presenter argues with Ian Carroll, who denies that Epstein had an account named Baal [E2]."]], "expect": "Resolves 'he' to Ian Carroll; explains his OCR-error argument, cited"},
+  {"id": "spoken", "question": "How does the speaker connect Baal to the bank account?", "spoken": true, "expect": "Two to four plain speakable sentences, no lists or markdown"},
+  {"id": "esoteric-absent", "question": "What does the archive say about the Freemasons?", "lens": "esoteric", "expect": "Says the passages do not address Freemasons (or only tangentially); may offer uncited lore labeled as such; no invented archive claims"}
+]

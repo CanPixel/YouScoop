@@ -21,6 +21,10 @@ diagnostics = []
 name = "desktop_setup"
 required-features = ["diagnostics"]
 
+[[example]]
+name = "enrich_video"
+required-features = ["diagnostics"]
+
 [dev-dependencies]
 tempfile = "3"
 
@@ -43,6 +47,10 @@ anyhow = "1"
 knowledge-core = { path = "../crates/knowledge-core" }
 inference-coordinator = { path = "../crates/inference-coordinator" }
 thiserror = "2"
+# Speaker diarization (pyannote segmentation + speaker embeddings + clustering).
+# Static prebuilt libraries; runs in a child process so ingestion can cancel it.
+sherpa-onnx = "=1.13.8"
+sherpa-onnx-sys = "=1.13.8"
 
 # whisper-rs-sys and llama-cpp-sys-2 each statically link their own ggml; the
 # linker keeps only one copy, so the two vendored ggml versions must match or

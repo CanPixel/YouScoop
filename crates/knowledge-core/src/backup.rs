@@ -786,6 +786,7 @@ impl Archive {
             tx.execute("INSERT OR IGNORE INTO annotation_conflicts SELECT ?1,?2 WHERE NOT EXISTS(SELECT 1 FROM annotation_decisions WHERE id=?1)",params![c.id,c.incoming.entity_id])?;
         }
         tx.commit()?;
+        self.ensure_search_index()?;
         let mut q = self
             .conn
             .prepare("SELECT DISTINCT source_id FROM source_conflicts ORDER BY source_id")?;

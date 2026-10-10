@@ -19,7 +19,7 @@ SACRiNOMiCON is a local conversational archive on desktop and Android. Separate 
 - Shared versioned source packages and a transactional local SQLite archive with lexical and vector retrieval. Models and embeddings are replaceable; originals, annotations, and provenance persist.
 - Local STT, endpoint detection, cancellation, and native offline TTS for half-duplex voice. Voice components load on entering voice mode and unload on leaving. Sentence streaming speech and Qwen speech remain optional enhancements requiring their own verification, not phone dependencies.
 
-Native Omni/Gemma trials are documented in experiments/model-trial/REPORT.md. Complete two-hour ingestion throughput and Fold thermals/latency remain measured gates, not promises. Do not remove audiovisual understanding to make a benchmark pass. Use selective bounded inspection and make processing coverage visible.
+Native Omni/Gemma trials are documented in experiments/model-trial/REPORT.md. (2026-10-02: Omni was later removed after it added little accuracy over the transcript, OCR and frame descriptions; see MODEL-DECISION.md.) Complete two-hour ingestion throughput and Fold thermals/latency remain measured gates, not promises. Do not remove audiovisual understanding to make a benchmark pass. Use selective bounded inspection and make processing coverage visible.
 
 ## Required deliverables and completion gates
 

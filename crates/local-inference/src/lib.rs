@@ -11,7 +11,18 @@ use llama_cpp_2::model::params::LlamaModelParams;
 use llama_cpp_2::model::{AddBos, LlamaModel};
 use llama_cpp_2::sampling::LlamaSampler;
 
+/// Chat context in tokens. The Mac has the memory and Metal throughput for a
+/// wider evidence window; phones keep the smaller, measured budget.
+pub const CHAT_CONTEXT: u32 = if cfg!(target_os = "macos") { 8192 } else { 4096 };
 fn n_threads()->i32 { std::thread::available_parallelism().map(|n|n.get() as i32).unwrap_or(4).min(6) }
+/// How the next token is chosen. Greedy keeps evidence answers literal;
+/// a low, seeded temperature lets associative answers vary their phrasing
+/// while the same question still yields the same reply.
+#[derive(Clone, Copy, Debug)]
+pub enum Sampling {
+    Greedy,
+    Warm { temperature: f32, seed: u32 },
+}
 pub struct TextEngine {
     chat_model: LlamaModel,
     embed: LlamaModel,
@@ -32,8 +43,18 @@ impl TextEngine {
         cancel: &AtomicBool,
         on_token: &mut dyn FnMut(&str),
     ) -> Result<String> {
+        self.chat_with(prompt, max_tokens, Sampling::Greedy, cancel, on_token)
+    }
+    pub fn chat_with(
+        &self,
+        prompt: &str,
+        max_tokens: usize,
+        sampling: Sampling,
+        cancel: &AtomicBool,
+        on_token: &mut dyn FnMut(&str),
+    ) -> Result<String> {
         let ctx_params = LlamaContextParams::default()
-            .with_n_ctx(NonZeroU32::new(4096))
+            .with_n_ctx(NonZeroU32::new(CHAT_CONTEXT))
             .with_n_batch(512)
             .with_n_ubatch(512)
             .with_n_threads(n_threads())
@@ -47,7 +68,7 @@ impl TextEngine {
             .chat_model
             .str_to_token(prompt, AddBos::Never)
             .map_err(|e| anyhow!("chat tokenize: {e}"))?;
-        if tokens.len() + max_tokens >= 4096 { return Err(anyhow!("Context is too large. Start a new conversation or narrow the source scope.")); }
+        if tokens.len() + max_tokens >= CHAT_CONTEXT as usize { return Err(anyhow!("Context is too large. Start a new conversation or narrow the source scope.")); }
         let n_batch = ctx.n_batch() as usize;
         let mut n_past: i32 = 0;
         for window in tokens.chunks(n_batch) {
@@ -61,12 +82,22 @@ impl TextEngine {
             n_past += window.len() as i32;
         }
 
-        // Greedy decoding: answers are grounded in retrieved excerpts, and
-        // sampling temperature just adds paraphrase drift.
-        let sampler = LlamaSampler::chain_simple([
-            LlamaSampler::penalties(64, 1.05, 0.0, 0.0),
-            LlamaSampler::greedy(),
-        ]);
+        // Greedy by default: evidence answers are grounded in retrieved
+        // excerpts, and sampling temperature just adds paraphrase drift.
+        let sampler = match sampling {
+            Sampling::Greedy => LlamaSampler::chain_simple([
+                LlamaSampler::penalties(64, 1.05, 0.0, 0.0),
+                LlamaSampler::greedy(),
+            ]),
+            // Qwen3's recommended top-k/top-p, with a cooler temperature for grounding.
+            Sampling::Warm { temperature, seed } => LlamaSampler::chain_simple([
+                LlamaSampler::penalties(64, 1.05, 0.0, 0.0),
+                LlamaSampler::top_k(20),
+                LlamaSampler::top_p(0.8, 1),
+                LlamaSampler::temp(temperature),
+                LlamaSampler::dist(seed),
+            ]),
+        };
         generate(&mut ctx, &self.chat_model, n_past, max_tokens, sampler, cancel, on_token)
     }
 

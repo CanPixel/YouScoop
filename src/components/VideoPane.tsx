@@ -1,11 +1,12 @@
-import { Fragment, forwardRef, useImperativeHandle, useMemo, useRef, useState, useEffect } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState, useEffect } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { api } from "../api";
 import { formatTs } from "../lib/format";
 import UpdateDownloaderButton, { STALE_HINT } from "./UpdateDownloaderButton";
 import DesktopRuntime from "./DesktopRuntime";
-import type { ChunkPublic, IngestProgress, OmniMoment, SavedSource, TranscriptCue, VideoMeta, WorkerStatus } from "../types";
+import { ANALYSES } from "../types";
+import type { ChunkPublic, IngestProgress, SavedSource, TranscriptCue, VideoMeta, VoiceSummary, WorkerStatus } from "../types";
 
 export interface VideoPaneHandle {
   seekTo: (secs: number) => void;
@@ -15,18 +16,14 @@ interface Props {
   meta: VideoMeta;
   chunks: ChunkPublic[];
   transcript: TranscriptCue[];
-  moments: OmniMoment[];
+  voices: VoiceSummary[];
   ingest?: IngestProgress;
   onCancelIngest: () => void;
+  onUpdateAnalysis: () => Promise<void>;
   onRetry: () => void;
   worker: WorkerStatus | null;
   onWorkerChanged: () => void;
   busy: boolean;
-  inspectionStatus: string;
-  onInspect: (start: number, question: string) => Promise<void>;
-  onInspectSource: () => Promise<{ changed: boolean; error?: string }>;
-  onReviewMoment: (start: number, end: number, text: string) => Promise<void>;
-  onRemoveReviewedMoment: (start: number, end: number) => Promise<void>;
 }
 
 const STAGES: { id: string; label: string }[] = [
@@ -35,10 +32,9 @@ const STAGES: { id: string; label: string }[] = [
   { id: "frames", label: "Keyframes" },
   { id: "describe", label: "Vision pass" },
   { id: "index", label: "Semantic index" },
+  { id: "voices", label: "Voices" },
+  { id: "onscreen", label: "On-screen text" },
 ];
-
-const SCENE_QUESTION = "In one short sentence, describe only what the camera shows. Ignore the spoken words. Do not quote or guess on-screen text, names, dates, numbers, or what a document proves.";
-const JOINT_QUESTION = "What is said and what does the visible evidence actually show? Mark uncertain text and separate claims from observations.";
 
 // Map backend stages onto the visual checklist.
 const STAGE_ALIAS: Record<string, string> = {
@@ -49,10 +45,19 @@ const STAGE_ALIAS: Record<string, string> = {
   frames: "frames",
   describe: "describe",
   index: "index",
+  voices: "voices",
+  onscreen: "onscreen",
+};
+
+const SOURCE_LABEL: Record<ChunkPublic["source"], string> = {
+  speech: "Speech",
+  vision: "Frame model · visual",
+  ocr: "On-screen text · OCR",
+  frame: "Screen · from OCR",
 };
 
 const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
-  { meta, chunks, transcript, moments, ingest, onCancelIngest, onRetry, worker, onWorkerChanged, busy, inspectionStatus, onInspect, onInspectSource, onReviewMoment, onRemoveReviewedMoment },
+  { meta, chunks, transcript, voices, ingest, onCancelIngest, onUpdateAnalysis, onRetry, worker, onWorkerChanged, busy },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -61,39 +66,41 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
   const [activeRow, setActiveRow] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<SavedSource | null>(null);
-  const [needsArchiveUpdate, setNeedsArchiveUpdate] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [inspecting, setInspecting] = useState(false);
-  const [inspectError, setInspectError] = useState<string | null>(null);
-  const [reviewing, setReviewing] = useState<{ start: number; end: number } | null>(null);
-  const [reviewText, setReviewText] = useState("");
-  const [reviewError, setReviewError] = useState<string | null>(null);
-  const [reviewSaving, setReviewSaving] = useState(false);
-  const [inspectQuestion, setInspectQuestion] = useState(SCENE_QUESTION);
-  const latestMoments = useMemo(() => {
-    const bySpan = new Map<string, OmniMoment>();
-    for (const moment of moments) bySpan.set(`${moment.start}:${moment.end}`, moment);
-    return [...bySpan.values()];
-  }, [moments]);
   const currentId = useRef(meta.id);
   currentId.current = meta.id;
+  // Voice separation often splits one narrator into several small clusters.
+  // A voice is distinct with a tenth of the speaking time or three minutes;
+  // with fewer than two distinct voices, naming them only adds noise.
+  const distinctVoices = useMemo(() => {
+    const total = voices.reduce((sum, v) => sum + v.seconds, 0);
+    const distinct = voices.filter((v) => v.seconds >= 180 || v.seconds >= total * 0.1);
+    return new Set(distinct.length >= 2 ? distinct.map((v) => v.voice) : []);
+  }, [voices]);
   const entries = useMemo(() => {
-    const speech: ChunkPublic[] = transcript.length
+    const speech: (ChunkPublic & { voice?: string | null })[] = transcript.length
       ? transcript.map((cue) => ({ ...cue, source: "speech" }))
       : chunks.filter((chunk) => chunk.source === "speech");
-    const pending: ChunkPublic[] = latestMoments.map((m) => ({start:m.start,end:m.end,text:m.text,source:"audiovisual"}));
-    return [...speech, ...chunks.filter((chunk) => chunk.source !== "speech" && chunk.source !== "audiovisual"), ...pending]
+    const sorted: (ChunkPublic & { voice?: string | null; voiceChange?: boolean })[] = [...speech, ...chunks.filter((chunk) => chunk.source !== "speech")]
       .sort((a, b) => a.start - b.start);
-  }, [chunks, transcript, latestMoments]);
+    // Name the voice where speech changes hands, not on every caption line,
+    // and only when the source really has more than one distinct voice.
+    let previous: string | null | undefined;
+    return sorted.map((entry) => {
+      if (entry.source !== "speech" || !entry.voice || !distinctVoices.has(entry.voice)) return entry;
+      const change = entry.voice !== previous;
+      previous = entry.voice;
+      return { ...entry, voiceChange: change };
+    });
+  }, [chunks, transcript, distinctVoices]);
+  const missingAnalyses = meta.status === "ready" ? ANALYSES.filter((a) => !(meta.analysis ?? []).includes(a)) : [];
+  const enriching = meta.status === "ready" && ["voices", "onscreen", "scenes", "describe", "spellings"].includes(ingest?.stage ?? "");
+  const [enrichError, setEnrichError] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveRow(null);
     setSaved(null);
-    setNeedsArchiveUpdate(false);
     setSaveError(null);
-    setReviewing(null);
-    setReviewText("");
-    setReviewError(null);
     if (transcriptRef.current) transcriptRef.current.scrollTop = 0;
   }, [meta.id]);
 
@@ -128,14 +135,14 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
 
   const markers = useMemo(() => {
     if (!meta.durationSecs || meta.durationSecs <= 0) return [];
-    return [...chunks.filter((c) => c.source !== "audiovisual"), ...latestMoments.map((m): ChunkPublic => ({start:m.start,end:m.end,text:m.text,source:"audiovisual"}))].map((c, i) => ({
+    return chunks.map((c, i) => ({
       key: i,
       left: Math.min(99.5, (c.start / meta.durationSecs) * 100),
       source: c.source,
       start: c.start,
       preview: c.text.length > 140 ? c.text.slice(0, 140) + "…" : c.text,
     }));
-  }, [chunks, latestMoments, meta.durationSecs]);
+  }, [chunks, meta.durationSecs]);
 
   async function saveSource() {
     const id = meta.id;
@@ -145,18 +152,12 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
       const result = await api.saveToArchive(id);
       if (currentId.current === id) {
         setSaved(result);
-        setNeedsArchiveUpdate(false);
       }
     } catch (error) {
       if (currentId.current === id) setSaveError(String(error));
     } finally {
       setSaving(false);
     }
-  }
-
-  function markArchiveChanged() {
-    if (saved) setNeedsArchiveUpdate(true);
-    setSaved(null);
   }
 
   return (
@@ -191,7 +192,7 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
                 className={`timeline-marker ${m.source}`}
                 style={{ left: `${m.left}%` }}
                 title={`[${formatTs(m.start)}] ${m.preview}`}
-                aria-label={`${m.source === "vision" ? "Visual description" : m.source === "audiovisual" ? "Raw Omni inspection" : m.source === "audiovisual_reviewed" ? "Reviewed observation" : "Speech"} at ${formatTs(m.start)}`}
+                aria-label={`${m.source === "vision" ? "Visual description" : m.source === "ocr" ? "On-screen text" : "Speech"} at ${formatTs(m.start)}`}
                 onClick={() => seekTo(m.start, m.source)}
               />
             ))}
@@ -199,7 +200,7 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
           <div className="timeline-legend">
             <span><i className="legend-dot speech" /> speech</span>
             <span><i className="legend-dot vision" /> visual</span>
-            {latestMoments.length > 0 && <span><i className="legend-dot audiovisual" /> Omni raw</span>}
+            {chunks.some((c) => c.source === "ocr") && <span><i className="legend-dot ocr" /> on-screen text</span>}
             <span className="timeline-count">{chunks.length} indexed moments</span>
           </div>
         </div>
@@ -226,11 +227,22 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
           </button>
         )}
         {meta.status === "ready" && (
-          <button className="video-source-link archive-save" disabled={saving || busy || inspecting || reviewSaving} onClick={() => void saveSource()}>
-            {saving ? "Preserving source…" : saved ? "✓ Saved to SACRiNOMiCON" : needsArchiveUpdate ? "↻ Update SACRiNOMiCON" : "◇ Save to SACRiNOMiCON"}
+          <button className="video-source-link archive-save" disabled={saving || busy} onClick={() => void saveSource()}>
+            {saving ? "Preserving source…" : saved ? "✓ Saved to SACRiNOMiCON" : "◇ Save to SACRiNOMiCON"}
           </button>
         )}
-        {needsArchiveUpdate && <p className="archive-receipt" role="status">This source changed after the last save. Save again to update the archive’s current version. Earlier revisions remain preserved.</p>}
+        {distinctVoices.size > 0 && <p className="voice-summary">Voices by speaking time: {voices.filter((v) => distinctVoices.has(v.voice)).map((v) => `${v.voice} ${formatTs(v.seconds)}`).join(" · ")}. Automatic clusters, not identities.</p>}
+        {(missingAnalyses.length > 0 || enriching) && <div className="analysis-update" role="status">
+          {enriching ? <>
+            <span>{ingest?.detail}</span>
+            <div className="progress-bar"><div className="progress-fill" style={{ width: `${(ingest?.progress ?? 0) * 100}%` }} /></div>
+            <button className="btn btn-ghost btn-sm" onClick={onCancelIngest}>Cancel</button>
+          </> : <>
+            <span>{ingest?.stage === "ready" && ingest.detail.startsWith("Some analyses") ? ingest.detail : `Not yet analysed: ${missingAnalyses.map((a) => ({ voices: "who is speaking", "onscreen:3": "text shown on screen, with partial page readings merged", "scenes:4": "keyframes spread across the video, with complete scene descriptions (Qwen2.5-VL)", spellings: "caption misspellings of on-screen names" })[a]).join(", ")}. The video stays usable while this runs.`}</span>
+            <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => { setEnrichError(null); void onUpdateAnalysis().catch((e) => setEnrichError(String(e))); }}>Update analysis</button>
+          </>}
+          {enrichError && <span className="archive-save-error" role="alert">{enrichError}</span>}
+        </div>}
         {saved && (
           <div className="archive-receipt" role="status">
             <span>{saved.evidenceCount} passages and {saved.artifactCount} original artifacts preserved in your Inbox.</span>
@@ -240,47 +252,16 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
         {saveError && <p className="archive-save-error" role="alert">{saveError}</p>}
       </div>
 
-      {meta.status === "ready" && <section className="omni-inspection" aria-label="Audiovisual inspection">
-        <div><strong>Inspect this moment with Omni</strong><span>Audio and video supplied · next 10 seconds · {latestMoments.length} raw inspected moments</span></div>
-        <div className="inspection-presets" aria-label="Inspection question presets">
-          <button className="btn btn-ghost btn-sm" disabled={busy || saving} onClick={() => setInspectQuestion(SCENE_QUESTION)}>Visible scene</button>
-          <button className="btn btn-ghost btn-sm" disabled={busy || saving} onClick={() => setInspectQuestion(JOINT_QUESTION)}>Speech and visuals</button>
-        </div>
-        <textarea aria-label="Omni inspection question" value={inspectQuestion} maxLength={4000} rows={2} onChange={(e) => setInspectQuestion(e.target.value)} disabled={busy || saving} />
-        <button className="btn btn-ghost btn-sm" disabled={busy || saving || !worker?.omniReady} onClick={() => {
-          const start = videoRef.current?.currentTime ?? 0;
-          setInspecting(true); setInspectError(null);
-          void onInspect(start, inspectQuestion).then(markArchiveChanged).catch((e) => setInspectError(String(e))).finally(() => setInspecting(false));
-        }}>{inspecting ? "Listening and watching…" : "Inspect playback position"}</button>
-        <button className="btn btn-ghost btn-sm" disabled={busy || saving || !worker?.omniReady} onClick={() => {
-          setInspecting(true); setInspectError(null);
-          void onInspectSource().then(({changed,error}) => {
-            if (changed) markArchiveChanged();
-            if (error) setInspectError(error);
-          }).catch((e) => setInspectError(String(e))).finally(() => setInspecting(false));
-        }}>Experimental 12-moment sweep / resume</button>
-        <p className="inference-status">Selective coverage: up to 12 ten-second moments. Omni stops after its first output line to avoid fabricated continuations, so a description can be incomplete. Raw model text stays outside search and the archive until you write a reviewed observation. The full speech transcript remains available.</p>
-        {inspecting && <button className="btn btn-ghost btn-sm" onClick={() => void api.stopWorker()}>Cancel inspection</button>}
-        {inspecting && inspectionStatus && <p className="inference-status" role="status">{inspectionStatus}</p>}
-        {inspectError && <p role="alert" className="archive-save-error">{inspectError}</p>}
-      </section>}
-
       {entries.length > 0 && (
         <section className="transcript-panel" aria-label="Transcript and visual descriptions">
           <div className="transcript-header">
             <strong>Transcript & visuals</strong>
-            <span>Original speech, raw model output, and your reviewed observations. Raw model details can be invented.</span>
+            <span>Original speech, on-screen text and automatic frame descriptions. Frame descriptions can be wrong.</span>
           </div>
           <div className="transcript-scroll" ref={transcriptRef}>
-            {entries.map((entry, index) => {
-              const rawMoment = entry.source === "audiovisual"
-                ? latestMoments.find((moment) => moment.start === entry.start && moment.end === entry.end)
-                : undefined;
-              const alignedSpeech = rawMoment
-                ? transcript.filter((cue) => cue.start < entry.end && cue.end > entry.start).map((cue) => cue.text).join(" ")
-                : "";
-              return <Fragment key={`${meta.id}-${index}`}>
+            {entries.map((entry, index) => (
               <button
+                key={`${meta.id}-${index}`}
                 data-row={index}
                 className={`transcript-row ${entry.source}${activeRow === index ? " active" : ""}`}
                 aria-current={activeRow === index ? "true" : undefined}
@@ -288,43 +269,11 @@ const VideoPane = forwardRef<VideoPaneHandle, Props>(function VideoPane(
               >
                 <span className="transcript-time">{formatTs(entry.start)}</span>
                 <span className="transcript-content">
-                  <span className="transcript-label">{entry.source === "vision" ? "SmolVLM2 · visual" : entry.source === "audiovisual" ? rawMoment?.truncated ? "Omni · raw, incomplete" : "Omni · first output line, unverified" : entry.source === "audiovisual_reviewed" ? "Your reviewed observation" : "Speech"}</span>
-                  <span>{entry.text}</span>
-                  {rawMoment?.truncated && <span className="transcript-label">Output reached its length limit and may be incomplete.</span>}
+                  <span className="transcript-label">{SOURCE_LABEL[entry.source]}{entry.voiceChange && ` · ${entry.voice}`}</span>
+                  <span className={entry.source === "ocr" ? "ocr-text" : undefined}>{entry.text}</span>
                 </span>
               </button>
-              {entry.source === "audiovisual" && <div className="review-controls">
-                <details className="review-context">
-                  <summary>Compare with the speech transcript and inspection question</summary>
-                  <p><strong>Asked Omni:</strong> {rawMoment?.question ?? "Question unavailable"}</p>
-                  <p><strong>{meta.hasCaptions ? "Source captions" : "Automatic speech transcript"}:</strong> {alignedSpeech || "No aligned speech text for this moment."}</p>
-                  <p>Captions and model output can both mishear or misread details. Replay the video before writing a reviewed observation.</p>
-                </details>
-                <button className="btn btn-ghost btn-sm" disabled={saving || busy} onClick={() => {
-                  setReviewing({start:entry.start,end:entry.end});
-                  setReviewText(chunks.find((c) => c.source === "audiovisual_reviewed" && c.start === entry.start && c.end === entry.end)?.text ?? "");
-                  setReviewError(null);
-                }}>Write reviewed observation</button>
-                {reviewing?.start === entry.start && reviewing.end === entry.end && <div className="review-editor">
-                  <p>Replay the moment and write only what you can confirm. Your observation is still not independent proof of any speaker claim.</p>
-                  <textarea aria-label="Reviewed observation" maxLength={1200} rows={3} value={reviewText} onChange={(e) => setReviewText(e.target.value)} />
-                  <button className="btn btn-ghost btn-sm" disabled={saving || reviewSaving || reviewText.trim().length < 8} onClick={() => {
-                    setReviewSaving(true);setReviewError(null);
-                    void onReviewMoment(entry.start,entry.end,reviewText).then(() => {setReviewing(null);markArchiveChanged();}).catch((e) => setReviewError(String(e))).finally(() => setReviewSaving(false));
-                  }}>{reviewSaving ? "Saving…" : "Save reviewed observation"}</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setReviewing(null)}>Cancel</button>
-                  {reviewError && <p role="alert">{reviewError}</p>}
-                </div>}
-              </div>}
-              {entry.source === "audiovisual_reviewed" && <div className="review-controls">
-                <button className="btn btn-ghost btn-sm" disabled={saving || busy} onClick={() => {
-                  setReviewError(null);
-                  void onRemoveReviewedMoment(entry.start,entry.end).then(markArchiveChanged).catch((e) => setReviewError(String(e)));
-                }}>Remove from current YouScoop search</button>
-                {reviewError && <p role="alert">{reviewError}</p>}
-              </div>}
-            </Fragment>;
-            })}
+            ))}
           </div>
         </section>
       )}

@@ -2,7 +2,6 @@ use crate::{now, Claim, Concept, Evidence, Relationship, Source, SourcePackage};
 use anyhow::{bail, Context, Result};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 pub struct Archive {
@@ -124,6 +123,8 @@ impl Archive {
             CREATE INDEX IF NOT EXISTS evidence_source ON evidence(source_id,current);
             CREATE VIRTUAL TABLE IF NOT EXISTS evidence_fts USING fts5(id UNINDEXED, text, tokenize='unicode61');
             CREATE VIRTUAL TABLE IF NOT EXISTS assessment_fts USING fts5(id UNINDEXED, note, tokenize='unicode61');
+            CREATE TABLE IF NOT EXISTS evidence_vectors(id TEXT PRIMARY KEY REFERENCES evidence(id), vector BLOB NOT NULL);
+            CREATE VIRTUAL TABLE IF NOT EXISTS evidence_trigram USING fts5(id UNINDEXED, text, tokenize='trigram');
             CREATE TABLE IF NOT EXISTS claims(id TEXT PRIMARY KEY, source_id TEXT NOT NULL REFERENCES sources(id), data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS concepts(id TEXT PRIMARY KEY, data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS concept_evidence(concept_id TEXT NOT NULL REFERENCES concepts(id), evidence_id TEXT NOT NULL REFERENCES evidence(id), PRIMARY KEY(concept_id,evidence_id));
@@ -210,6 +211,8 @@ impl Archive {
         let tx = self.conn.transaction()?;
         let id = import_records(&tx, package)?;
         tx.commit()?;
+        // Index new passages now so the first question after an import is not slow.
+        self.ensure_search_index()?;
         Ok(id)
     }
     pub fn assess(&self, entity_id: &str, status: &str, note: &str) -> Result<Assessment> {
@@ -571,150 +574,6 @@ impl Archive {
         )?;
         Ok(relationship)
     }
-    pub fn search(
-        &self,
-        query: &str,
-        vector: Option<&[f32]>,
-        source_id: Option<&str>,
-        limit: usize,
-    ) -> Result<Vec<SearchHit>> {
-        if vector
-            .is_some_and(|v| v.len() != crate::EMBEDDING_DIM || v.iter().any(|f| !f.is_finite()))
-        {
-            bail!("Incompatible query embedding");
-        }
-        let stopwords = [
-            "the",
-            "and",
-            "for",
-            "are",
-            "was",
-            "were",
-            "what",
-            "when",
-            "where",
-            "which",
-            "who",
-            "why",
-            "how",
-            "does",
-            "did",
-            "this",
-            "that",
-            "there",
-            "here",
-            "about",
-            "video",
-            "with",
-            "from",
-            "they",
-            "them",
-            "his",
-            "her",
-            "its",
-            "into",
-            "have",
-            "has",
-            "say",
-            "speaker",
-            "claim",
-            "claims",
-            "said",
-            "parts",
-            "remain",
-            "interpretation",
-            "rather",
-            "than",
-            "visible",
-            "evidence",
-        ];
-        let terms: Vec<String> = query
-            .split(|c: char| !c.is_alphanumeric())
-            .filter(|s| s.len() > 2 && !stopwords.contains(&s.to_lowercase().as_str()))
-            .take(24)
-            .map(|s| format!("\"{}\"", s))
-            .collect();
-        let mut lexical = HashMap::new();
-        if !terms.is_empty() {
-            let mut q = self.conn.prepare("SELECT f.id FROM evidence_fts f JOIN evidence e ON e.id=f.id WHERE evidence_fts MATCH ?1 AND e.current=1 AND (?2 IS NULL OR e.source_id=?2) ORDER BY bm25(evidence_fts) LIMIT 300")?;
-            for (rank, row) in q
-                .query_map(params![terms.join(" OR "), source_id], |r| {
-                    r.get::<_, String>(0)
-                })?
-                .enumerate()
-            {
-                lexical.insert(row?, 1.0 / (1.0 + rank as f32 * 0.1));
-            }
-            let mut q=self.conn.prepare("SELECT a.id FROM assessment_fts a JOIN evidence e ON e.id=a.id WHERE assessment_fts MATCH ?1 AND e.current=1 AND (?2 IS NULL OR e.source_id=?2) ORDER BY bm25(assessment_fts) LIMIT 100")?;
-            for row in q.query_map(params![terms.join(" OR "), source_id], |r| {
-                r.get::<_, String>(0)
-            })? {
-                lexical.insert(row?, 1.5);
-            }
-        }
-        let assessments: HashMap<_, _> = self
-            .assessments()?
-            .into_iter()
-            .map(|a| (a.entity_id.clone(), a))
-            .collect();
-        let titles: HashMap<String, String> = self
-            .all::<Source>("SELECT data FROM sources")?
-            .into_iter()
-            .map(|s| (s.id, s.title))
-            .collect();
-        let mut q = self.conn.prepare(
-            "SELECT data FROM evidence WHERE current=1 AND (?1 IS NULL OR source_id=?1)",
-        )?;
-        let mut hits = Vec::new();
-        for row in q.query_map(params![source_id], |r| r.get::<_, String>(0))? {
-            let mut evidence: Evidence = serde_json::from_str(&row?)?;
-            let source_spellings = assessments
-                .get(&evidence.source_id)
-                .map_or_else(Vec::new, |a| a.source_spellings.clone());
-            let corrected = assessments
-                .get(&evidence.id)
-                .and_then(|a| a.corrected_text.as_deref());
-            let reading = if corrected.is_some() || !source_spellings.is_empty() {
-                Some(corrected_spelling(
-                    corrected.unwrap_or(&evidence.text),
-                    &source_spellings,
-                ))
-            } else {
-                None
-            };
-            let corrected_match = reading.as_ref().is_some_and(|r| {
-                let words: std::collections::HashSet<_> = r
-                    .split(|c: char| !c.is_alphanumeric())
-                    .map(str::to_lowercase)
-                    .collect();
-                terms
-                    .iter()
-                    .any(|t| words.contains(&t.trim_matches('"').to_lowercase()))
-            });
-            let text_score = lexical
-                .get(&evidence.id)
-                .copied()
-                .unwrap_or(0.0)
-                .max(if corrected_match { 1.0 } else { 0.0 });
-            let similarity = vector.map(|v| cosine(v, &evidence.vector)).unwrap_or(0.0);
-            if text_score <= 0.0 && similarity <= 0.0 {
-                continue;
-            }
-            let score = similarity + text_score * 0.25;
-            evidence.vector.clear();
-            hits.push(SearchHit {
-                source_title: titles.get(&evidence.source_id).cloned().unwrap_or_default(),
-                assessment: assessments.get(&evidence.id).cloned(),
-                reading,
-                source_spellings,
-                evidence,
-                score,
-            });
-        }
-        hits.sort_by(|a, b| b.score.total_cmp(&a.score));
-        hits.truncate(limit.min(30));
-        Ok(hits)
-    }
 }
 fn read_spellings(
     row: &rusqlite::Row<'_>,
@@ -745,7 +604,7 @@ pub(crate) fn immutable_record<T: Serialize>(
     }
     Ok(())
 }
-fn cosine(a: &[f32], b: &[f32]) -> f32 {
+pub(crate) fn cosine(a: &[f32], b: &[f32]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
         return 0.0;
     }
@@ -868,5 +727,141 @@ pub(crate) fn import_records(
     for a in &package.assets {
         tx.execute("INSERT INTO assets VALUES(?1,?2,?3) ON CONFLICT(source_id,id) DO UPDATE SET data=excluded.data",params![package.source.id,a.id,serde_json::to_string(a)?])?;
     }
+    carry_annotations(tx, package)?;
     Ok(package.source.id.clone())
+}
+
+/// Marks an assessment copied onto a new revision's passage.
+pub const CARRIED_NOTE: &str = "[Carried forward from the same moment in an earlier revision of this source.]";
+
+fn passage_words(text: &str) -> std::collections::HashSet<String> {
+    let text = crate::leading_label(text).map_or(text, |(_, rest)| rest);
+    text.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).map(str::to_lowercase).collect()
+}
+
+/// Re-apply a corrected reading to a reprocessed passage. When the new text is
+/// the old text with a prefix (a voice label), the correction carries whole.
+/// When boundaries moved, a correction that only replaced words one for one
+/// ("Ball" with "Baal") is applied to the same words in the new text; any
+/// other kind of correction is left with the old passage.
+fn carry_reading(old: &str, corrected: &str, new: &str) -> Option<String> {
+    if let Some(prefix) = new.strip_suffix(old) {
+        return Some(format!("{prefix}{corrected}"));
+    }
+    let core = |w: &str| w.trim_matches(|c: char| !c.is_alphanumeric()).to_string();
+    let (before, after): (Vec<&str>, Vec<&str>) = (old.split_whitespace().collect(), corrected.split_whitespace().collect());
+    if before.len() != after.len() {
+        return None;
+    }
+    let mut swaps: Vec<(String, String)> = Vec::new();
+    for (a, b) in before.iter().zip(&after) {
+        let (a, b) = (core(a), core(b));
+        if a != b && !a.is_empty() && !b.is_empty() && !swaps.iter().any(|(x, _)| *x == a) {
+            swaps.push((a, b));
+        }
+    }
+    if swaps.is_empty() {
+        return None;
+    }
+    let mut changed = false;
+    let words: Vec<String> = new
+        .split(' ')
+        .map(|token| {
+            let word = core(token);
+            match swaps.iter().find(|(from, _)| *from == word) {
+                Some((from, to)) => {
+                    changed = true;
+                    token.replacen(from.as_str(), to, 1)
+                }
+                None => token.to_string(),
+            }
+        })
+        .collect();
+    changed.then(|| words.join(" "))
+}
+
+/// Reprocessing a source (re-chunking by voice, new OCR) gives its passages new
+/// IDs, so annotations on the previous revision would silently stop applying.
+/// Copy each annotation from a passage that is no longer current onto the new
+/// passages of the same kind that cover the same moment and words: a passage
+/// split in two maps to both halves, a merged one to the whole. A new passage
+/// that already has an annotation is never overwritten. A corrected reading is
+/// carried only when the new text is the old text with a prefix such as a voice
+/// label; the old assessment and its history stay attached to the old passage.
+fn carry_annotations(tx: &rusqlite::Transaction<'_>, package: &SourcePackage) -> Result<()> {
+    let annotated: Vec<(String, Assessment)> = tx
+        .prepare("SELECT e.data,a.entity_id,a.status,a.note,a.updated_at,a.corrected_text,a.source_spellings FROM assessments a JOIN evidence e ON e.id=a.entity_id WHERE e.source_id=?1 AND e.current=0")?
+        .query_map(params![package.source.id], |r| {
+            Ok((r.get::<_, String>(0)?, Assessment {
+                entity_id: r.get(1)?,
+                status: r.get(2)?,
+                note: r.get(3)?,
+                updated_at: r.get::<_, i64>(4)? as u64,
+                corrected_text: r.get(5)?,
+                source_spellings: read_spellings(r, 6)?,
+            }))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    let linked: Vec<(String, String)> = tx
+        .prepare("SELECT c.concept_id,c.evidence_id FROM concept_evidence c JOIN evidence e ON e.id=c.evidence_id WHERE e.source_id=?1 AND e.current=0")?
+        .query_map(params![package.source.id], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    if annotated.is_empty() && linked.is_empty() {
+        return Ok(());
+    }
+    let olds: std::collections::HashMap<String, Evidence> = tx
+        .prepare("SELECT data FROM evidence WHERE source_id=?1 AND current=0")?
+        .query_map(params![package.source.id], |r| r.get::<_, String>(0))?
+        .map(|data| Ok(serde_json::from_str::<Evidence>(&data?)?))
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .map(|e| (e.id.clone(), e))
+        .collect();
+    let successors = |old: &Evidence| -> Vec<&Evidence> {
+        let old_words = passage_words(&old.text);
+        package
+            .evidence
+            .iter()
+            .filter(|new| new.kind == old.kind && new.end.min(old.end) > new.start.max(old.start))
+            .filter(|new| {
+                let new_words = passage_words(&new.text);
+                let shared = old_words.intersection(&new_words).count() as f64;
+                let smaller = old_words.len().min(new_words.len()).max(1) as f64;
+                // 70% covers moved chunk boundaries (measured 0.75 after voice
+                // re-chunking) while requiring most of the content to be the same.
+                shared / smaller >= 0.7
+            })
+            .collect()
+    };
+    for (data, old_assessment) in &annotated {
+        let old: Evidence = serde_json::from_str(data)?;
+        for new in successors(&old) {
+            let taken: bool = tx.query_row("SELECT EXISTS(SELECT 1 FROM assessments WHERE entity_id=?1)", params![new.id], |r| r.get(0))?;
+            if taken {
+                continue;
+            }
+            let corrected_text = old_assessment.corrected_text.as_ref().and_then(|corrected| carry_reading(&old.text, corrected, &new.text));
+            // Nothing to carry: no judgement, no note, and the reading did not apply here.
+            if old_assessment.status == "unreviewed" && old_assessment.note.replace(CARRIED_NOTE, "").trim().is_empty() && corrected_text.is_none() {
+                continue;
+            }
+            let note = if old_assessment.note.contains(CARRIED_NOTE) {
+                old_assessment.note.clone()
+            } else {
+                format!("{}\n{CARRIED_NOTE}", old_assessment.note).trim_start().to_string()
+            };
+            let carried = Assessment { entity_id: new.id.clone(), status: old_assessment.status.clone(), note, corrected_text, source_spellings: vec![], updated_at: now() };
+            crate::backup::keep_assessment(tx, &carried)?;
+            tx.execute("INSERT INTO assessments(entity_id,status,note,updated_at,corrected_text,source_spellings) VALUES(?1,?2,?3,?4,?5,'[]')",
+                params![carried.entity_id, carried.status, carried.note, carried.updated_at as i64, carried.corrected_text])?;
+        }
+    }
+    for (concept, evidence_id) in &linked {
+        if let Some(old) = olds.get(evidence_id) {
+            for new in successors(old) {
+                tx.execute("INSERT OR IGNORE INTO concept_evidence VALUES(?1,?2)", params![concept, new.id])?;
+            }
+        }
+    }
+    Ok(())
 }

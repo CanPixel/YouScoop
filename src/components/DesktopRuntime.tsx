@@ -25,12 +25,11 @@ export default function DesktopRuntime({ status, onChanged }: { status: WorkerSt
   const config = draft ?? status?.config;
   if (!config) return null;
   return <details className="desktop-runtime">
-    <summary>Desktop models · Omni {status?.omniReady ? "available" : "needs setup"} · Gemma {status?.gemmaReady ? "available" : "needs setup"}</summary>
-    <p>Each large model runs separately and releases its memory when finished. Setup preserves a pinned Python environment and verified models in Application Support. Inference works offline after installation.</p>
+    <summary>Desktop model · Gemma {status?.gemmaReady ? "available" : "needs setup"}</summary>
+    <p>Gemma runs separately and releases its memory when finished. Setup preserves a pinned Python environment and the verified model in Application Support. Inference works offline after installation.</p>
     <div className="runtime-install-actions">
       <button className="btn btn-ghost btn-sm" disabled={saving || !status?.uvAvailable} onClick={() => void install(api.setupDesktopRuntime)}>{status?.runtimeReady ? "Check / repair runtime" : "Install desktop runtime"}</button>
       {!status?.uvAvailable && <button className="btn btn-ghost btn-sm" onClick={() => void openUrl("https://docs.astral.sh/uv/getting-started/installation/").catch((e) => setError(String(e)))}>Install uv first ↗</button>}
-      <button className="btn btn-ghost btn-sm" disabled={saving || !status?.runtimeReady} onClick={() => void install(() => api.installDesktopModel("omni", status?.cachedOmni ?? null))}>{status?.omniReady ? "Verify Omni files" : status?.cachedOmni ? "Install Omni from local cache" : "Download Omni · 12 GB"}</button>
       <button className="btn btn-ghost btn-sm" disabled={saving || !status?.runtimeReady} onClick={() => void install(() => api.installDesktopModel("gemma", status?.cachedGemma ?? null))}>{status?.gemmaReady ? "Verify Gemma files" : status?.cachedGemma ? "Install Gemma from local cache" : "Download Gemma · 15.4 GB"}</button>
       {saving && <button className="btn btn-ghost btn-sm" onClick={() => void api.stopWorker().catch((e) => setError(String(e)))}>Cancel setup</button>}
     </div>
@@ -41,7 +40,6 @@ export default function DesktopRuntime({ status, onChanged }: { status: WorkerSt
       event.preventDefault(); void install(() => api.configureWorker(config));
     }}>
       <label>Python executable<input value={config.python} disabled={saving} onChange={(e) => setConfig({ ...config, python: e.target.value })} /></label>
-      <label>Omni 3B snapshot<input value={config.omniModel} disabled={saving} onChange={(e) => setConfig({ ...config, omniModel: e.target.value })} /></label>
       <label>Gemma A4B MLX snapshot<input value={config.gemmaModel} disabled={saving} onChange={(e) => setConfig({ ...config, gemmaModel: e.target.value })} /></label>
       <button className="btn btn-ghost btn-sm" disabled={saving}>{saving ? "Saving…" : "Save runtime paths"}</button>
     </form>

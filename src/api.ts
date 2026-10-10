@@ -13,7 +13,6 @@ import type {
   SavedSource,
   WorkerStatus,
   WorkerConfig,
-  OmniMoment,
 } from "./types";
 
 export const api = {
@@ -26,6 +25,7 @@ export const api = {
   saveToArchive: (id: string) => invoke<SavedSource>("save_to_archive", { id }),
   addVideo: (url: string) => invoke<void>("add_video", { url }),
   retryVideo: (id: string) => invoke<void>("retry_video", { id }),
+  updateAnalysis: (id: string) => invoke<void>("update_analysis", { id }),
   cancelIngest: (id: string) => invoke<void>("cancel_ingest", { id }),
   removeVideo: (id: string) => invoke<void>("remove_video", { id }),
   askVideo: (videoId: string, question: string, history: { question: string; answer: string }[]) =>
@@ -34,11 +34,7 @@ export const api = {
   workerStatus: () => invoke<WorkerStatus>("worker_status"),
   configureWorker: (config: WorkerConfig) => invoke<void>("configure_worker", { config }),
   setupDesktopRuntime: () => invoke<WorkerStatus>("setup_desktop_runtime"),
-  installDesktopModel: (model: "omni" | "gemma", source: string | null) => invoke<WorkerStatus>("install_desktop_model", { model, source }),
-  inspectMoment: (videoId: string, start: number, question: string) => invoke<OmniMoment>("inspect_moment", { videoId, start, question }),
-  inspectSource: (videoId: string) => invoke<OmniMoment[]>("inspect_source", { videoId }),
-  reviewMoment: (videoId: string, start: number, end: number, text: string) => invoke<void>("review_moment", { videoId, start, end, text }),
-  removeReviewMoment: (videoId: string, start: number, end: number) => invoke<void>("remove_review_moment", { videoId, start, end }),
+  installDesktopModel: (model: "gemma", source: string | null) => invoke<WorkerStatus>("install_desktop_model", { model, source }),
   askGemma: (videoId: string, question: string, history: {question: string; answer: string}[]) => invoke<ChatAnswer>("ask_gemma", { videoId, question, history }),
   stopWorker: () => invoke<void>("stop_worker"),
 };

@@ -849,3 +849,73 @@ fn extractive_drafts_preserve_evidence_and_survive_repeated_imports() {
     a.assess(&p.claims[0].id,"contested","My review").unwrap();navigation_drafts(&mut p);a.import(&p,dir.path()).unwrap();
     assert!(a.summary().unwrap().assessments.iter().any(|v|v.note=="My review"));
 }
+
+#[test]
+fn annotations_follow_reprocessed_passages_without_overwriting_new_work() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut archive = Archive::open(dir.path()).unwrap();
+    let mut first = fixture();
+    first.claims.clear();
+    first.concepts.clear();
+    first.source.duration_seconds = 700.0;
+    let provenance = first.evidence[0].provenance.clone();
+    let speech = |id: &str, start: f64, end: f64, text: &str| Evidence {
+        id: id.into(), source_id: "source-a".into(), start, end, text: text.into(), kind: EvidenceKind::Speech,
+        provenance: provenance.clone(), vector: vec![0.0; EMBEDDING_DIM],
+    };
+    first.evidence = vec![
+        speech("old-dialogue", 430.0, 470.0, "Jeffrey Epstein did not have a bank account named Ball. Yes, he did. This premise is hobgoblins."),
+        speech("old-claim", 491.0, 504.0, "So the only time the account is named Ball is when it's actually named Ball."),
+        speech("old-unrelated", 600.0, 640.0, "A different subject about temples and baths."),
+    ];
+    archive.import(&first, dir.path()).unwrap();
+    archive.assess("old-dialogue", "contested", "Two voices disagree here.").unwrap();
+    archive.correct_reading("old-claim", Some("So the only time the account is named Baal is when it's actually named Baal.")).unwrap();
+    archive.add_concept("Account name", "old-claim").unwrap();
+
+    // Reprocessing with voice separation splits the dialogue and labels the claim.
+    let mut second = first.clone();
+    second.revision = "revision-b".into();
+    second.evidence = vec![
+        speech("new-denial", 430.0, 439.0, "[Voice B] Jeffrey Epstein did not have a bank account named Ball."),
+        speech("new-retort", 439.0, 442.0, "[Voice A] Yes, he did. This premise is hobgoblins."),
+        speech("new-claim", 491.0, 504.0, "[Voice A] So the only time the account is named Ball is when it's actually named Ball."),
+        speech("new-unrelated", 600.0, 640.0, "[Voice A] A different subject about temples and baths."),
+    ];
+    archive.assess("old-unrelated", "supported", "Checked.").unwrap();
+    archive.import(&second, dir.path()).unwrap();
+
+    let assessments: std::collections::HashMap<String, Assessment> =
+        archive.summary().unwrap().assessments.into_iter().map(|a| (a.entity_id.clone(), a)).collect();
+    for id in ["new-denial", "new-retort"] {
+        assert_eq!(assessments[id].status, "contested");
+        assert!(assessments[id].note.starts_with("Two voices disagree here.") && assessments[id].note.contains("Carried forward"));
+        assert_eq!(assessments[id].corrected_text, None);
+    }
+    // The corrected reading keeps the new voice label.
+    assert_eq!(assessments["new-claim"].corrected_text.as_deref(), Some("[Voice A] So the only time the account is named Baal is when it's actually named Baal."));
+    assert_eq!(archive.reading("new-claim").unwrap(), "[Voice A] So the only time the account is named Baal is when it's actually named Baal.");
+    // Concept links follow; old annotations stay on the preserved passages.
+    let concept = archive.summary().unwrap().concepts.into_iter().find(|c| c.label == "Account name").unwrap();
+    assert!(concept.evidence_ids.contains(&"new-claim".to_string()) && concept.evidence_ids.contains(&"old-claim".to_string()));
+    assert_eq!(assessments["old-dialogue"].note, "Two voices disagree here.");
+    assert_eq!(assessments["new-unrelated"].status, "supported");
+    // A word-for-word correction follows the words even when passage boundaries move.
+    let mut fourth = second.clone();
+    fourth.revision = "revision-d".into();
+    fourth.evidence[2] = speech("moved-claim", 495.0, 510.0, "[Voice A] the account is named Ball is when it's actually named Ball. Now, a search.");
+    archive.import(&fourth, dir.path()).unwrap();
+    assert_eq!(archive.reading("moved-claim").unwrap(), "[Voice A] the account is named Baal is when it's actually named Baal. Now, a search.");
+    let mut second = second.clone();
+    second.revision = "revision-e".into();
+    archive.import(&second, dir.path()).unwrap();
+    // A new passage's own annotation is never replaced by a later carry.
+    archive.assess("new-claim", "belief", "My new reading.").unwrap();
+    let mut third = second.clone();
+    third.revision = "revision-c".into();
+    archive.import(&third, dir.path()).unwrap();
+    let kept = archive.summary().unwrap().assessments.into_iter().find(|a| a.entity_id == "new-claim").unwrap();
+    assert_eq!((kept.status.as_str(), kept.note.as_str()), ("belief", "My new reading."));
+    // Search sees the carried reading.
+    assert!(archive.search("Baal", None, None, 6).unwrap().iter().any(|h| h.evidence.id == "new-claim"));
+}

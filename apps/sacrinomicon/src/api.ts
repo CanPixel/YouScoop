@@ -1,5 +1,5 @@
 import { invoke as nativeInvoke, isTauri } from "@tauri-apps/api/core";
-import type { Library, ModelStatus, SourceDetail, Evidence, SearchHit, ImportReport, SpellingCorrection } from "./types";
+import type { Library, ModelStatus, SourceDetail, Evidence, SearchHit, ImportReport, SpellingCorrection, SpellingSuggestion, Lens } from "./types";
 function invoke<T = unknown>(command: string, args?: Record<string, unknown>): Promise<T> {
   if (!isTauri()) return Promise.reject(new Error("Open SACRiNOMiCON as a native app to access your local library and models."));
   return nativeInvoke<T>(command, args);
@@ -13,6 +13,7 @@ export const api = {
   assess: (entityId: string, status: string, note: string) => invoke("assess", { entityId, status, note }),
   correctReading: (evidenceId: string, corrected: string | null) => invoke("correct_reading", { evidenceId, corrected }),
   correctSourceSpellings: (sourceId: string, spellings: SpellingCorrection[]) => invoke("correct_source_spellings", { sourceId, spellings }),
+  spellingSuggestions: (sourceId: string) => invoke<SpellingSuggestion[]>("spelling_suggestions", { sourceId }),
   resolveAnnotation: (id: string, useIncoming: boolean) => invoke("resolve_annotation", { id, useIncoming }),
   activateRevision: (sourceId: string, revision: string) => invoke("activate_revision", { sourceId, revision }),
   exportLibrary: () => invoke<{ saved: boolean; path: string | null }>("export_library"),
@@ -27,8 +28,11 @@ export const api = {
   voiceMode: (enabled: boolean) => invoke("voice_mode", { enabled }),
   transcribe: (samples: Float32Array) => invoke<string>("transcribe_voice", { samples: Array.from(samples) }),
   speak: (text: string) => invoke("speak_text", { text }),
+  speechEngine: () => invoke<"neural" | "system" | "native">("speech_engine"),
+  voices: () => invoke<{ id: string; label: string }[]>("oracle_voices"),
+  synthesize: (text: string, voice: string) => invoke<ArrayBuffer>("synthesize_speech", { text, voice }),
   stopSpeech: () => invoke("stop_speech"),
-  ask: (question: string, sourceId: string | null, history: [string, string][]) => invoke<{ answer: string; sources: SearchHit[] }>("ask_oracle", { question, sourceId, history }),
+  ask: (question: string, sourceId: string | null, history: [string, string][], lens: Lens, spoken: boolean) => invoke<{ answer: string; sources: SearchHit[]; threads: string[] }>("ask_oracle", { question, sourceId, history, lens, spoken }),
   import: async (file: File, progress: (fraction: number) => void) => {
     const id = await invoke<string>("begin_import");
     try {

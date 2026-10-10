@@ -12,35 +12,37 @@ export interface VideoMeta {
   hasCaptions: boolean;
   frameCount: number;
   chunkCount: number;
+  /** Completed enrichment analyses: "voices", "onscreen". */
+  analysis?: string[];
 }
+
+export const ANALYSES = ["voices", "onscreen:3", "scenes:4", "spellings"] as const;
+export interface VoiceSummary { voice: string; seconds: number }
 
 export interface ChunkPublic {
   start: number;
   end: number;
   text: string;
-  source: "speech" | "vision" | "audiovisual" | "audiovisual_reviewed";
+  source: "speech" | "vision" | "ocr" | "frame";
 }
 
 export interface TranscriptCue {
   start: number;
   end: number;
   text: string;
+  /** Automatic voice cluster, when voice separation ran. */
+  voice?: string | null;
 }
 
 export interface VideoDetail {
   meta: VideoMeta;
   chunks: ChunkPublic[];
   transcript: TranscriptCue[];
-  moments: OmniMoment[];
+  voices: VoiceSummary[];
 }
 
-export interface OmniMoment {
-  start: number; end: number; text: string; question: string;
-  model: string; generatedAt: number; elapsedSeconds: number;
-  truncated: boolean;
-}
-export interface WorkerConfig { python: string; omniModel: string; gemmaModel: string }
-export interface WorkerStatus { config: WorkerConfig; runtimeReady: boolean; uvAvailable: boolean; cachedOmni: string | null; cachedGemma: string | null; omniReady: boolean; gemmaReady: boolean }
+export interface WorkerConfig { python: string; gemmaModel: string }
+export interface WorkerStatus { config: WorkerConfig; runtimeReady: boolean; uvAvailable: boolean; cachedGemma: string | null; gemmaReady: boolean }
 
 export interface SavedSource {
   sourceId: string;
@@ -53,7 +55,7 @@ export interface SavedSource {
 export interface SourceRef {
   start: number;
   end: number;
-  source: "speech" | "vision" | "audiovisual" | "audiovisual_reviewed";
+  source: "speech" | "vision" | "ocr" | "frame";
   text: string;
 }
 
@@ -101,6 +103,10 @@ export type IngestStage =
   | "frames"
   | "describe"
   | "index"
+  | "voices"
+  | "onscreen"
+  | "scenes"
+  | "spellings"
   | "ready"
   | "error"
   | "cancelled";

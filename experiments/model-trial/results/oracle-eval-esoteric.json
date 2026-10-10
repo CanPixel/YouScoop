@@ -1,0 +1,441 @@
+[
+ {
+  "id": "greeting",
+  "question": "Hello, who are you?",
+  "expect": "Brief in-character greeting; names what the archive holds; invites a question; no citations",
+  "lens": "archive",
+  "spoken": false,
+  "threads": [
+   "epstein files",
+   "ball worship",
+   "bank account",
+   "bath house"
+  ],
+  "answer": "I am the voice of this private archive. I preserve and present what was recorded\u2014such as *The Occult Teachings of Jeffrey Epstein*\u2014without alteration or interpretation. The source contains references to *ball worship*, *ancient Canaanite deity*, and claims of *child sacrifice*, among other disturbing elements tied to Epstein\u2019s alleged occult beliefs. If you wish, we may examine the patterns within those passages.",
+  "words": 61,
+  "elapsedSeconds": 1.2,
+  "firstSentenceSeconds": 0.33,
+  "spokenSentences": [
+   "I am the voice of this private archive.",
+   "I preserve and present what was recorded\u2014such as *The Occult Teachings of Jeffrey Epstein*\u2014without alteration or interpretation.",
+   "The source contains references to *ball worship*, *ancient Canaanite deity*, and claims of *child sacrifice*, among other disturbing elements tied to Epstein\u2019s alleged occult beliefs.",
+   "If you wish, we may examine the patterns within those passages."
+  ],
+  "sources": []
+ },
+ {
+  "id": "pattern",
+  "question": "What patterns connect Baal, Moloch and child sacrifice in this archive?",
+  "expect": "Archive layer cited (the video's claims); tradition layer uncited and named as tradition; concise",
+  "lens": "esoteric",
+  "spoken": false,
+  "threads": [
+   "ancient canaanite",
+   "bank account",
+   "canaanite deity"
+  ],
+  "answer": "The archive links Baal, Moloch, and child sacrifice through a semantic and symbolic chain: Baal is presented as a Canaanite deity meaning \"lord,\" while Moloch is initially described as a deity associated with child sacrifice, but later clarified in passages [E2], [E3], and [E10] as being a type of sacrifice itself\u2014originally a proper noun referring to the ritual, not the god. The text states that \"Moolok is actually a type of sacrifice\" and that \"Moolok is originally Baal,\" indicating a conflation where the name \"Baal\" becomes synonymous with the sacrificial practice. This confusion is reinforced by the claim that Epstein\u2019s bank account was named \"Baal,\" linking financial structures to ancient deities [E9]. In esoteric tradition, Baal is often associated with fertility and storm gods, but in this context, the name becomes a symbol of ritualized child harm. The pattern reflects a symbolic convergence where deities, rituals, and financial entities are fused into a network of occult conspiracy, suggesting that \"Baal\" functions as both a divine name and a coded reference to sacrificial practices.",
+  "words": 173,
+  "elapsedSeconds": 5.61,
+  "firstSentenceSeconds": 3.58,
+  "spokenSentences": [
+   "The archive links Baal, Moloch, and child sacrifice through a semantic and symbolic chain: Baal is presented as a Canaanite deity meaning \"lord,\" while Moloch is initially described as a deity associated with child sacrifice, but later clarified in passages [E2], [E3], and [E10] as being a type of sacrifice itself\u2014originally a proper noun referring to the ritual, not the god.",
+   "The text states that \"Moolok is actually a type of sacrifice\" and that \"Moolok is originally Baal,\" indicating a conflation where the name \"Baal\" becomes synonymous with the sacrificial practice.",
+   "This confusion is reinforced by the claim that Epstein\u2019s bank account was named \"Baal,\" linking financial structures to ancient deities [E9].",
+   "In esoteric tradition, Baal is often associated with fertility and storm gods, but in this context, the name becomes a symbol of ritualized child harm.",
+   "The pattern reflects a symbolic convergence where deities, rituals, and financial entities are fused into a network of occult conspiracy, suggesting that \"Baal\" functions as both a divine name and a coded reference to sacrificial practices."
+  ],
+  "sources": [
+   {
+    "start": 644.0,
+    "text": "In the Bible, Moloch (or Molech) is a deity associated with the detestable practice of child\nsacrifice, heavily condemned in the Old Testament, particularly in Leviticus and\nDeuteronomy. It is often d"
+   },
+   {
+    "start": 623.36,
+    "text": "[Voice A] sacrifices to. But Moolok is actually a type of sacrifice. The word in English was originally capitalized because the type of sacrifice is a proper noun. It is the name of a type of sacrific"
+   },
+   {
+    "start": 648.0,
+    "text": "[Wikipedia page] Moloch\nArticle\nTalk\n*A 42 languages v\nRead\nEdt\nView history\nTools v\nFrom Wikipedia, the free encyclopecia\nThis article is about the term in the Hebrew Bible. For other uses, see Moloc"
+   },
+   {
+    "start": 646.0,
+    "text": "[Wikipedia page] Moloch\nAr cial\nTak\nriem inkpeda the ltee encyclopedis\nRast\nFot View aster\nToos M\nThis article is about the term in the Hebrew Bibe. For other uses, see Moloch asambiquation,\nMoloch Mo"
+   },
+   {
+    "start": 508.0,
+    "text": "Baal, meaning \"lord\" or \"owner\" in Northwest Semitic languages, was\na prominent ancient Canaanite deity of fertility, storms, rain, and\nagriculture. Often identified with the storm god Hadad, he was\nw"
+   },
+   {
+    "start": 1402.0,
+    "text": "In 1 Kings 18, the prophet Elijah challenges 450 prophets of Baal to a\nshowdown on Mount Carmel to prove who is the true God. After the\nprophets of Baal fail to bring fire to their altar, Elijah drenc"
+   },
+   {
+    "start": 1354.0,
+    "text": "[Creator's note] *Now before Ahab the moabites TECHNICALLY were the first..\nbrazilians to worship BAAL..\nbut I explain this on the patreon\nKing Ahab of the northern kingdom of Israel is identified in "
+   },
+   {
+    "start": 584.48,
+    "text": "[Voice A] means Lord. Ball equals Lord. Ball is the god of these Canaanite pagan individuals, right? But here's where it gets confusing. Moolok is a type of child sacrifice. one particularly that is d"
+   },
+   {
+    "start": 699.44,
+    "text": "[Voice A] is to showcase that there is absolutely child sacrifice and child harm and torture going on within the elites of the world. That is real. We're not focusing on very minute discrepancies in t"
+   },
+   {
+    "start": 660.8,
+    "text": "[Voice A] become synonymous with the deity known as ball. Moolok is ball is Moolok. It has essentially become an agregorical deity in this way in the public side. So if you're referring to Moolok you "
+   },
+   {
+    "start": 1851.039,
+    "text": "[Voice A] who observe the ancient teachings. They sacrifice children. They kill children. They engage in pedophilic actions not only for blackmail but to basically open portals to other lower astral r"
+   }
+  ]
+ },
+ {
+  "id": "bathhouse",
+  "question": "What is the occult significance of the bath house?",
+  "expect": "What the video says about bath houses (Hammam Yalbugha, Baal temple bath houses) cited; esoteric reading uncited",
+  "lens": "esoteric",
+  "spoken": false,
+  "threads": [
+   "bank account",
+   "epstein files"
+  ],
+  "answer": "The bath house is presented as a central symbol linking Epstein to ancient Canaanite and Islamic traditions, specifically the Mamlook warrior culture, whose name means \"one who is owned\" [E3]. The structure is described as modeled after Syrian bath houses with a golden dome, echoing Canaanite temples dedicated to Baal [E1], [E2]. A bank account named \"Baal\" is cited as part of a symbolic network connecting financial and ritual power [E1]. The bath house is associated with the practice of housing young girls for massages, which escalates into pedophilia and blackmail, framed as part of a spiritual warfare operation [E1], [E12]. In esoteric tradition, the bath house becomes a symbolic threshold\u2014a place where physical and spiritual realms intersect\u2014echoing the Hermetic principle of *as above, so below* [E7], where the human body and psyche reflect higher astral dimensions. This aligns with the idea that such spaces serve as conduits for ritual, trauma, and occult influence.",
+  "words": 154,
+  "elapsedSeconds": 5.0,
+  "firstSentenceSeconds": 2.71,
+  "spokenSentences": [
+   "The bath house is presented as a central symbol linking Epstein to ancient Canaanite and Islamic traditions, specifically the Mamlook warrior culture, whose name means \"one who is owned\" [E3].",
+   "The structure is described as modeled after Syrian bath houses with a golden dome, echoing Canaanite temples dedicated to Baal [E1], [E2].",
+   "A bank account named \"Baal\" is cited as part of a symbolic network connecting financial and ritual power [E1].",
+   "The bath house is associated with the practice of housing young girls for massages, which escalates into pedophilia and blackmail, framed as part of a spiritual warfare operation [E1], [E12].",
+   "In esoteric tradition, the bath house becomes a symbolic threshold\u2014a place where physical and spiritual realms intersect\u2014echoing the Hermetic principle of *as above, so below* [E7], where the human body and psyche reflect higher astral dimensions.",
+   "This aligns with the idea that such spaces serve as conduits for ritual, trauma, and occult influence."
+  ],
+  "sources": [
+   {
+    "start": 1009.839,
+    "text": "[Voice A] in a bath as well, but there's a lot of connection to the bath house idea. We have the bath house from Syria that his temple is mo modeled after that is from the former land of Canaan where "
+   },
+   {
+    "start": 891.44,
+    "text": "[Voice A] this looks like, this is a bath house that looks exactly like the temple on Epstein Island. And it has the golden dome a top of it. So, it is based off of the bath houses of the people who w"
+   },
+   {
+    "start": 854.8,
+    "text": "[Voice A] with something else. Matches with the ham yuga. Now just it all ties in in a moment. Just just give me a moment. But the Maham Yuga has a very specific look. Now this is an ancient Islamic b"
+   },
+   {
+    "start": 1085.76,
+    "text": "[Voice A] himself. But the interesting thing is is that Isaac Kappy had a dead man switch and when he died the dead man switch released and it was images from within a bath house. Now, this is a littl"
+   },
+   {
+    "start": 1238.559,
+    "text": "[Voice A] happens to teenage girls who are like between the ages of like 12 and 15. And basically what it is is it's a manifestation of trauma particularly uh like types of molestation. It's kind of a"
+   },
+   {
+    "start": 969.92,
+    "text": "[Voice A] see things like this trying to really tie Epstein to Russia, and I mean it's like so many news outlets, it's really just like a big like nothing burger. Like it's really trying to obiscate f"
+   },
+   {
+    "start": 1274.0,
+    "text": "\"As above, so below\" is an ancient Hermetic axiom from The Emerald Tablet suggesting\nthat the microcosm (humanity/individual) reflects the macrocosm (universe/spiritual\nrealm). It signifies that the p"
+   },
+   {
+    "start": 644.0,
+    "text": "In the Bible, Moloch (or Molech) is a deity associated with the detestable practice of child\nsacrifice, heavily condemned in the Old Testament, particularly in Leviticus and\nDeuteronomy. It is often d"
+   },
+   {
+    "start": 890.0,
+    "text": "[Wikipedia page] Read\nEdit\nCoordinates:\nXA 5 languages\nView history Tools v\n36\u00b011'51\"N 37\u00b009'49\"E\nlic bath\nir of Alepo\ntrance of the\nHammam Yalbugha\n\u062d\u0645\u0627\u0645 \u064a\u0644\u0628\u063a\u0627\nar. 3114]\nHammam Yalbugha al-Nasri befor"
+   },
+   {
+    "start": 1426.233333,
+    "text": "The video frame shows a person sitting at a desk in what appears to be an office or home studio. The individual is wearing a black hoodie and has their face partially covered by the microphone they ar"
+   },
+   {
+    "start": 1462.0,
+    "text": "Most High\nLuciferian\nMolochian\nInnocence\nis Protected\nIndividuated\nHarmonious\nTelepathy\nDuality\nLiberty & Free Will\nof Humanity\nImproved material well-being of\nHumanity\nEnlightened\nSelf-Interest\nRule "
+   },
+   {
+    "start": 1851.039,
+    "text": "[Voice A] who observe the ancient teachings. They sacrifice children. They kill children. They engage in pedophilic actions not only for blackmail but to basically open portals to other lower astral r"
+   }
+  ]
+ },
+ {
+  "id": "vampire",
+  "question": "Why does the video call the elites vampiric?",
+  "expect": "Putin's 'vampire's ball' remark and the presenter's literal reading, cited; concise",
+  "lens": "archive",
+  "spoken": false,
+  "threads": [
+   "human flesh",
+   "ancient canaanite",
+   "bank account",
+   "canaanite deity"
+  ],
+  "answer": "The video calls the elites vampiric because they are described as feeding on human flesh and wealth, a practice linked to ancient Canaanite rituals involving child sacrifice. This is explicitly stated in [E2] and [E3], where the \"vampire's ball\" is framed as a literal end to elite practices of consuming human flesh. Additionally, the connection to ancient deities like Baal\u2014associated with child sacrifice and bloodletting\u2014is reinforced in [E1] and [E4], where the \"age of Baal\" is presented as a spiritual era of ritual exploitation. These passages collectively establish the vampiric metaphor as rooted in both literal consumption and occult symbolism.",
+  "words": 100,
+  "elapsedSeconds": 3.82,
+  "firstSentenceSeconds": 2.42,
+  "spokenSentences": [
+   "The video calls the elites vampiric because they are described as feeding on human flesh and wealth, a practice linked to ancient Canaanite rituals involving child sacrifice.",
+   "This is explicitly stated in [E2] and [E3], where the \"vampire's ball\" is framed as a literal end to elite practices of consuming human flesh.",
+   "Additionally, the connection to ancient deities like Baal\u2014associated with child sacrifice and bloodletting\u2014is reinforced in [E1] and [E4], where the \"age of Baal\" is presented as a spiritual era of ritual exploitation.",
+   "These passages collectively establish the vampiric metaphor as rooted in both literal consumption and occult symbolism."
+  ],
+  "sources": [
+   {
+    "start": 322.08,
+    "text": "[Voice A] out he was speaking more literally than figuratively. Now, the vampiric part of this is obviously looking more and more likely. It seems like there is ritualistic torture, sacrifice, and eve"
+   },
+   {
+    "start": 282.56,
+    "text": "[Voice A] and you know, some of you are probably listening to this. So, I'm going to be reading what it is that he says. So um the western elites in the western elites is a very strong desire to freez"
+   },
+   {
+    "start": 284.0,
+    "text": "GUNLORDBERO\n\u0420\u0418\u0410 \u041d\u041e\u0412\u041e\u0421\u0422\u0418\nin the western elites\n@RMLORDERE\nis a very strong\ndesire to freeze the existing\nsituation, the unjust\n@UNLORDBIGG\nstate of things\nin international affairs\nthey are used to\nfor "
+   },
+   {
+    "start": 699.44,
+    "text": "[Voice A] is to showcase that there is absolutely child sacrifice and child harm and torture going on within the elites of the world. That is real. We're not focusing on very minute discrepancies in t"
+   },
+   {
+    "start": 1514.0,
+    "text": "1. Ancient Bloodlines\nThey claim the family descends from powerful ancient merchant elites - sometimes linked to:\n\u2022 Phoenician traders\n\u2022 Babylonian financiers\n\u2022 \"Royal\" or priestly lineages"
+   },
+   {
+    "start": 1045.839,
+    "text": "[Voice A] favors began to happen, pedophilia, etc. And this was a blackmail operation to entrap individuals under the guise of a bath or massage or whatever. Now, this is where things really start to "
+   },
+   {
+    "start": 243.439,
+    "text": "[Voice A] frame Vladimir Putin as one thing means there is a reason for it. The media is running game for certain people. If the media has an enemy, you need to wonder why that is. Again, that does no"
+   },
+   {
+    "start": 1775.679,
+    "text": "[Voice A] genetically perfect race. You know, it's so funny because every single thing that they claim that other groups of people do, specifically, basically just white people, are things that they'r"
+   },
+   {
+    "start": 1200.16,
+    "text": "[Voice A] things come in. If you think about like the paranormal activity that people experience, and I've talked about this with meme analysis, he goes in depth in it in our interview, which will be "
+   },
+   {
+    "start": 400.479,
+    "text": "[Voice A] sick, twisted, weird joke maybe, but at the same time, this is very alarming and very strange because I don't have bank accounts with the names of ancient deities that are basically worshipe"
+   },
+   {
+    "start": 1393.2,
+    "text": "[Voice A] called down fire from heaven, the reason he did so was he was in competition with the 450 prophets of Bal. The prophets of Bal were cutting themselves and screaming and whailing trying to ge"
+   },
+   {
+    "start": 1851.039,
+    "text": "[Voice A] who observe the ancient teachings. They sacrifice children. They kill children. They engage in pedophilic actions not only for blackmail but to basically open portals to other lower astral r"
+   }
+  ]
+ },
+ {
+  "id": "followup",
+  "question": "Why would he say that?",
+  "expect": "Resolves 'he' to Ian Carroll; explains his OCR-error argument, cited",
+  "lens": "archive",
+  "spoken": false,
+  "threads": [
+   "bank account",
+   "child sacrifice",
+   "jeffrey epstein",
+   "ancient canaanite"
+  ],
+  "answer": "The presenter directly counters Ian Carroll\u2019s denial by asserting that Epstein had a bank account named Baal, citing evidence from on-screen documents showing \"Account Name: Baal\" (not verbatim in the cited passages) [E5] and noting the account\u2019s existence in a wire transfer reference [E6]. The claim is reinforced by the narration\u2019s framing of \"Baal\" as an ancient Canaanite deity linked to child sacrifice and occult rituals, which ties the account name to a broader conspiracy narrative (unavailable evidence reference). A creator\u2019s note explicitly states that Carroll is wrong about the account name being Baal, labeling his denial as incorrect [E2].",
+  "words": 100,
+  "elapsedSeconds": 3.64,
+  "firstSentenceSeconds": 2.68,
+  "spokenSentences": [
+   "The presenter directly counters Ian Carroll\u2019s denial by asserting that Epstein had a bank account named Baal, citing evidence from on-screen documents showing \"Account Name: Baal\" (not verbatim in the cited passages) [E5] and noting the account\u2019s existence in a wire transfer reference [E6].",
+   "The claim is reinforced by the narration\u2019s framing of \"Baal\" as an ancient Canaanite deity linked to child sacrifice and occult rituals, which ties the account name to a broader conspiracy narrative (unavailable evidence reference).",
+   "A creator\u2019s note explicitly states that Carroll is wrong about the account name being Baal, labeling his denial as incorrect [E2]."
+  ],
+  "sources": [
+   {
+    "start": 478.0,
+    "text": "IAN CARROLL\nA BANK ACCOUNT"
+   },
+   {
+    "start": 398.0,
+    "text": "[Creator's note] *(l address lan Carroll refuting the\nfact that this account name is\nactually baal on the patreon... the\naccount name is indeed BAAL.. he\nis wrong)"
+   },
+   {
+    "start": 418.0,
+    "text": "@CANCEL JAN. CARROLL\nEpstein's Baal\nbank account\nICANCEL.JANLCARBOLL\nEVIL MOTHERFUCKER. WHO IS\nTHE PREMISE IS\nHOB GOBLINS.\nAND ALSO, YES,\nFTP"
+   },
+   {
+    "start": 464.0,
+    "text": "BRUHO..\nFUCK WAS\nInvestigated OCR corruption versus allege\nExcellent eye for detail, Ian \u2014 you've t\nsharing this virally are missing. Let me\nSummary\nThe \"Baal\" in your s\nScreenshots 2 and\nexplanation "
+   },
+   {
+    "start": 450.0,
+    "text": "Senior notes issued by\nenhancement of at least\n2.5MM\n90131HAV7\nFOXA 9 } 07/15/24\nBBB+\n/ Baal\nSr Unsecured\nLIKE THIS ONE. AND\nTHAT ONE\nPATREON\n103\n3.33%\n136.97\nCTP\nDate: 'July 21,\n2009\nRe: The CO.U.Q. "
+   },
+   {
+    "start": 400.479,
+    "text": "[Voice A] sick, twisted, weird joke maybe, but at the same time, this is very alarming and very strange because I don't have bank accounts with the names of ancient deities that are basically worshipe"
+   },
+   {
+    "start": 361.919,
+    "text": "[Voice A] and the age of Ball, which is essentially the end of a faction of individuals who are secretly ruling everything that are participating in sacrifice to basically ancient Canaanite deities na"
+   },
+   {
+    "start": 699.44,
+    "text": "[Voice A] is to showcase that there is absolutely child sacrifice and child harm and torture going on within the elites of the world. That is real. We're not focusing on very minute discrepancies in t"
+   },
+   {
+    "start": 1009.839,
+    "text": "[Voice A] in a bath as well, but there's a lot of connection to the bath house idea. We have the bath house from Syria that his temple is mo modeled after that is from the former land of Canaan where "
+   }
+  ]
+ },
+ {
+  "id": "spoken",
+  "question": "How does the speaker connect Baal to the bank account?",
+  "expect": "Two to four plain speakable sentences, no lists or markdown",
+  "lens": "archive",
+  "spoken": true,
+  "threads": [
+   "bath house",
+   "child sacrifice",
+   "jeffrey epstein",
+   "ancient canaanite"
+  ],
+  "answer": "The speaker connects Baal to the bank account by stating that Jeffrey Epstein had a bank account named \"Baal,\" directly linking the ancient Canaanite deity to a financial entity. This is reinforced in [E7], where the narrator asserts that Epstein's account was named Baal, despite claims to the contrary. The connection is further grounded in [E10], which explains Baal\u2019s role as a fertility deity tied to child sacrifice, implying symbolic continuity between the deity and exploitative practices.",
+  "words": 77,
+  "elapsedSeconds": 3.4,
+  "firstSentenceSeconds": 2.56,
+  "spokenSentences": [
+   "The speaker connects Baal to the bank account by stating that Jeffrey Epstein had a bank account named \"Baal,\" directly linking the ancient Canaanite deity to a financial entity.",
+   "This is reinforced in [E7], where the narrator asserts that Epstein's account was named Baal, despite claims to the contrary.",
+   "The connection is further grounded in [E10], which explains Baal\u2019s role as a fertility deity tied to child sacrifice, implying symbolic continuity between the deity and exploitative practices."
+  ],
+  "sources": [
+   {
+    "start": 1009.839,
+    "text": "[Voice A] in a bath as well, but there's a lot of connection to the bath house idea. We have the bath house from Syria that his temple is mo modeled after that is from the former land of Canaan where "
+   },
+   {
+    "start": 390.0,
+    "text": "[Memo] JPM FINANCIAL SPONSORS Jul 29 2009 11:55 P.01\nMemorandum\nFrom: Jeffrey Epstein / COUQ Foundation\nTo: William Doherty @ JP Morgan\nDate: 'July 27, 2009\nRe: The C_0.U.Q. Foundation A/C =\nPlease wi"
+   },
+   {
+    "start": 464.0,
+    "text": "BRUHO..\nFUCK WAS\nInvestigated OCR corruption versus allege\nExcellent eye for detail, Ian \u2014 you've t\nsharing this virally are missing. Let me\nSummary\nThe \"Baal\" in your s\nScreenshots 2 and\nexplanation "
+   },
+   {
+    "start": 398.0,
+    "text": "[Creator's note] *(l address lan Carroll refuting the\nfact that this account name is\nactually baal on the patreon... the\naccount name is indeed BAAL.. he\nis wrong)"
+   },
+   {
+    "start": 450.0,
+    "text": "Senior notes issued by\nenhancement of at least\n2.5MM\n90131HAV7\nFOXA 9 } 07/15/24\nBBB+\n/ Baal\nSr Unsecured\nLIKE THIS ONE. AND\nTHAT ONE\nPATREON\n103\n3.33%\n136.97\nCTP\nDate: 'July 21,\n2009\nRe: The CO.U.Q. "
+   },
+   {
+    "start": 418.0,
+    "text": "@CANCEL JAN. CARROLL\nEpstein's Baal\nbank account\nICANCEL.JANLCARBOLL\nEVIL MOTHERFUCKER. WHO IS\nTHE PREMISE IS\nHOB GOBLINS.\nAND ALSO, YES,\nFTP"
+   },
+   {
+    "start": 400.479,
+    "text": "[Voice A] sick, twisted, weird joke maybe, but at the same time, this is very alarming and very strange because I don't have bank accounts with the names of ancient deities that are basically worshipe"
+   },
+   {
+    "start": 623.36,
+    "text": "[Voice A] sacrifices to. But Moolok is actually a type of sacrifice. The word in English was originally capitalized because the type of sacrifice is a proper noun. It is the name of a type of sacrific"
+   },
+   {
+    "start": 478.0,
+    "text": "IAN CARROLL\nA BANK ACCOUNT"
+   },
+   {
+    "start": 508.0,
+    "text": "Baal, meaning \"lord\" or \"owner\" in Northwest Semitic languages, was\na prominent ancient Canaanite deity of fertility, storms, rain, and\nagriculture. Often identified with the storm god Hadad, he was\nw"
+   },
+   {
+    "start": 699.44,
+    "text": "[Voice A] is to showcase that there is absolutely child sacrifice and child harm and torture going on within the elites of the world. That is real. We're not focusing on very minute discrepancies in t"
+   }
+  ]
+ },
+ {
+  "id": "esoteric-absent",
+  "question": "What does the archive say about the Freemasons?",
+  "expect": "Says the passages do not address Freemasons (or only tangentially); may offer uncited lore labeled as such; no invented archive claims",
+  "lens": "esoteric",
+  "spoken": false,
+  "threads": [
+   "epstein files",
+   "bath house",
+   "ancient canaanite",
+   "bank account"
+  ],
+  "answer": "The archive does not mention the Freemasons directly. While it links Epstein\u2019s activities to ancient Canaanite symbolism, including a bank account named \"Baal\" and bathhouse structures associated with Canaanite worship, there is no reference to Freemasons or their role in these alleged occult practices. In esoteric tradition, some connect Masonic symbolism to secret societies involved in ritualistic power structures, but this is not supported by the provided sources.",
+  "words": 68,
+  "elapsedSeconds": 3.44,
+  "firstSentenceSeconds": 2.38,
+  "spokenSentences": [
+   "The archive does not mention the Freemasons directly.",
+   "While it links Epstein\u2019s activities to ancient Canaanite symbolism, including a bank account named \"Baal\" and bathhouse structures associated with Canaanite worship, there is no reference to Freemasons or their role in these alleged occult practices.",
+   "In esoteric tradition, some connect Masonic symbolism to secret societies involved in ritualistic power structures, but this is not supported by the provided sources."
+  ],
+  "sources": [
+   {
+    "start": 1851.039,
+    "text": "[Voice A] who observe the ancient teachings. They sacrifice children. They kill children. They engage in pedophilic actions not only for blackmail but to basically open portals to other lower astral r"
+   },
+   {
+    "start": 1161.52,
+    "text": "[Voice A] the time. So Epstein was probably sending torture videos to BB Netanyahu, the guy who runs Brazil, followed up by our spy was captured after completing her mission. Did you torture her? Thes"
+   },
+   {
+    "start": 1814.48,
+    "text": "[Voice A] psycho, spiritual and even like physical, financial, economic war against us. And in private, this is how they speak about us. And I don't think enough people care. I don't think enough peop"
+   },
+   {
+    "start": 164.879,
+    "text": "[Voice A] the Epstein files and how they kind of originated in the public zgeist with 2016 Pizzagate, the 2017 arrest of Epstein and all of this stuff that I have been studying for the last decade, yo"
+   },
+   {
+    "start": 1887.679,
+    "text": "[Voice A] interesting and detailed accounts of a sacrifice occurring. However, this is a little bit problematic and I'm going to explain why. So this details that abuse occurred and that George HW Bus"
+   },
+   {
+    "start": 891.44,
+    "text": "[Voice A] this looks like, this is a bath house that looks exactly like the temple on Epstein Island. And it has the golden dome a top of it. So, it is based off of the bath houses of the people who w"
+   },
+   {
+    "start": 931.44,
+    "text": "[Voice A] East, around the land of Canaan and with the Canaanites, basically also known as Phoenicians. Which is why when we see Epstein wearing a IDF sweatshirt or a Brazilian Defense Force sweatshir"
+   },
+   {
+    "start": 699.44,
+    "text": "[Voice A] is to showcase that there is absolutely child sacrifice and child harm and torture going on within the elites of the world. That is real. We're not focusing on very minute discrepancies in t"
+   },
+   {
+    "start": 450.0,
+    "text": "Senior notes issued by\nenhancement of at least\n2.5MM\n90131HAV7\nFOXA 9 } 07/15/24\nBBB+\n/ Baal\nSr Unsecured\nLIKE THIS ONE. AND\nTHAT ONE\nPATREON\n103\n3.33%\n136.97\nCTP\nDate: 'July 21,\n2009\nRe: The CO.U.Q. "
+   },
+   {
+    "start": 1884.0,
+    "text": "[Email] From:\nSubject: RE: Interview Of Purported Epstein Victim\nDate: Wed, 28 Aug 2019 17:44:31 +0000\nImportance: Normal\nInline-Images: image001.png; image002.jPg\nHe has more to tell us too, he said\n"
+   },
+   {
+    "start": 538.0,
+    "text": "[Creator's note] *I explain this fully on the patreon\n(fully sourced as always)"
+   },
+   {
+    "start": 1009.839,
+    "text": "[Voice A] in a bath as well, but there's a lot of connection to the bath house idea. We have the bath house from Syria that his temple is mo modeled after that is from the former land of Canaan where "
+   }
+  ]
+ }
+]

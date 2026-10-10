@@ -5,6 +5,10 @@ export interface Claim { id: string; sourceId: string; statement: string; kind: 
 export interface Concept { id: string; label: string; aliases: string[]; evidenceIds: string[] }
 export interface Relationship { id: string; fromId: string; toId: string; kind: string; evidenceIds: string[]; explanation: string; createdBy: string }
 export interface SpellingCorrection { original: string; corrected: string }
+export interface SpellingSuggestion {
+  original: string; suggested: string; evidence: string; captionUses: number; screens: number; keptOriginalAt: number[];
+  checks: { at: number; withoutHint: string; withHint: string }[];
+}
 export interface Assessment { entityId: string; status: string; note: string; correctedText?: string; sourceSpellings?: SpellingCorrection[]; updatedAt: number }
 export interface Asset { id: string; name: string; kind: string; sha256: string; bytes: number }
 export interface AnnotationConflict { id: string; incoming: Assessment }
@@ -15,4 +19,5 @@ export interface Library { sources: Source[]; evidenceCount: number; concepts: C
 export interface SourceDetail { source: Source; evidence: Evidence[]; claims: Claim[]; assessments: Assessment[]; assets: Asset[]; revisions: RevisionInfo[] }
 export interface SearchHit { evidence: Evidence; sourceTitle: string; score: number; assessment: Assessment | null; reading?: string | null; sourceSpellings?: SpellingCorrection[] }
 export interface ModelStatus { id: string; label: string; bytes: number; downloaded: boolean }
-export interface Message { id: string; role: "user" | "assistant"; text: string; sources?: SearchHit[]; streaming?: boolean; error?: boolean }
+export type Lens = "archive" | "esoteric";
+export interface Message { id: string; role: "user" | "assistant"; text: string; sources?: SearchHit[]; threads?: string[]; lens?: Lens; spoken?: boolean; streaming?: boolean; error?: boolean; at?: number }

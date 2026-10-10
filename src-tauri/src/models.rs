@@ -17,9 +17,11 @@ pub struct ModelSpec {
     pub url: &'static str,
     pub file: &'static str,
     pub bytes: u64,
+    /// Checked after download when present.
+    pub sha256: Option<&'static str>,
 }
 
-pub const MODELS: [ModelSpec; 5] = [
+pub const MODELS: [ModelSpec; 9] = [
     ModelSpec {
         id: "vlm",
         label: "SmolVLM2 2.2B Instruct",
@@ -27,6 +29,7 @@ pub const MODELS: [ModelSpec; 5] = [
         url: "https://huggingface.co/ggml-org/SmolVLM2-2.2B-Instruct-GGUF/resolve/main/SmolVLM2-2.2B-Instruct-Q4_K_M.gguf",
         file: "SmolVLM2-2.2B-Instruct-Q4_K_M.gguf",
         bytes: 1_112_602_656,
+        sha256: None,
     },
     ModelSpec {
         id: "mmproj",
@@ -35,6 +38,7 @@ pub const MODELS: [ModelSpec; 5] = [
         url: "https://huggingface.co/ggml-org/SmolVLM2-2.2B-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf",
         file: "mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf",
         bytes: 592_523_200,
+        sha256: None,
     },
     ModelSpec {
         id: "chat",
@@ -43,6 +47,7 @@ pub const MODELS: [ModelSpec; 5] = [
         url: "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
         file: "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
         bytes: 2_497_281_120,
+        sha256: None,
     },
     ModelSpec {
         id: "embed",
@@ -51,6 +56,7 @@ pub const MODELS: [ModelSpec; 5] = [
         url: "https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf",
         file: "bge-small-en-v1.5-q8_0.gguf",
         bytes: 36_806_944,
+        sha256: None,
     },
     ModelSpec {
         id: "whisper",
@@ -59,6 +65,45 @@ pub const MODELS: [ModelSpec; 5] = [
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
         file: "ggml-large-v3-turbo-q5_0.bin",
         bytes: 574_041_195,
+        sha256: None,
+    },
+    ModelSpec {
+        id: "segmentation",
+        label: "Pyannote segmentation 3.0",
+        detail: "Finds where each voice speaks, for separating speakers (MIT, CNRS)",
+        url: "https://huggingface.co/csukuangfj/sherpa-onnx-pyannote-segmentation-3-0/resolve/main/model.onnx",
+        file: "pyannote-segmentation-3.0.onnx",
+        bytes: 5_992_913,
+        sha256: Some("220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079"),
+    },
+    ModelSpec {
+        id: "voiceprint",
+        label: "WeSpeaker ResNet34-LM",
+        detail: "Speaker embeddings that group passages by voice (CC BY 4.0, WeSpeaker, VoxCeleb)",
+        url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/wespeaker_en_voxceleb_resnet34_LM.onnx",
+        file: "wespeaker_en_voxceleb_resnet34_LM.onnx",
+        bytes: 26_530_550,
+        sha256: Some("e9848563da86f263117134dfd7ad63c92355b37de492b55e325400c9d9c39012"),
+    },
+    // Frame descriptions: on the test source this invented about 3 details in
+    // 20 frames against 11 for SmolVLM2 (experiments/model-trial/results/frame-models.json).
+    ModelSpec {
+        id: "scene-vlm",
+        label: "Qwen2.5-VL 3B Instruct",
+        detail: "Describes video frames more accurately than SmolVLM2 (Q4_K_M, Apache-2.0)",
+        url: "https://huggingface.co/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf",
+        file: "Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf",
+        bytes: 1_929_901_056,
+        sha256: Some("d02fe9b69ad8cadbbd228e387667af66612c44bed29ffc8eb1e7caf9ac486c12"),
+    },
+    ModelSpec {
+        id: "scene-mmproj",
+        label: "Qwen2.5-VL 3B vision projector",
+        detail: "Image encoder for Qwen2.5-VL (Q8_0)",
+        url: "https://huggingface.co/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf",
+        file: "mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf",
+        bytes: 844_757_728,
+        sha256: Some("980c9b2f78c04e6cff93d277ada09e768394f112d75db3b4e9dea8a69f9fb904"),
     },
 ];
 
@@ -243,6 +288,16 @@ async fn do_download(
     drop(file);
 
     let got = std::fs::metadata(&part_path)?.len();
+    let digest_ok = match spec.sha256 {
+        Some(expected) if got == total => knowledge_core::file_digest(&part_path)?.0 == expected,
+        _ => true,
+    };
+    if !digest_ok {
+        let _ = std::fs::remove_file(&part_path);
+        let error = "downloaded model failed its checksum: retry to download it again".to_string();
+        emit_progress(app, &ModelProgress { id: id.into(), received: 0, total, done: false, error: Some(error.clone()) });
+        return Err(anyhow!(error));
+    }
     if got != total {
         emit_progress(
             app,

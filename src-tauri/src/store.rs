@@ -33,6 +33,9 @@ pub struct VideoMeta {
     /// questions ("what is this video about?") that retrieval alone can't answer.
     #[serde(default)]
     pub summary: Option<String>,
+    /// Completed enrichment analyses ("voices", "onscreen"); see pipeline::ANALYSES.
+    #[serde(default)]
+    pub analysis: Vec<String>,
 }
 
 impl VideoMeta {
@@ -64,6 +67,9 @@ pub struct Chunk {
 pub struct SubCue {
     pub start: f64,
     pub text: String,
+    /// Automatic voice cluster ("Voice A"), when voice separation ran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice: Option<String>,
 }
 
 /// Chunk as exposed to the frontend (no embedding vector).

@@ -1,0 +1,25 @@
+{
+  "carriedAnnotations": [
+    {
+      "hasCorrectedReading": false,
+      "passage": "[Voice A] sick, twisted, weird joke maybe, but at the same time, this is very alarming and very strange becaus",
+      "reading": "[Voice A] sick, twisted, weird joke maybe, but at the same time, this is very alarming and very strange becaus",
+      "status": "contested"
+    },
+    {
+      "hasCorrectedReading": true,
+      "passage": "[Voice A] and then you tried to make a convoluted thing with AI and it's still named ball. So, the only time t",
+      "reading": "[Voice A] and then you tried to make a convoluted thing with AI and it's still named Baal. So, the only time t",
+      "status": "unreviewed"
+    },
+    {
+      "hasCorrectedReading": true,
+      "passage": "[Voice A] little wrong. Now, a quick little Google search tells us that Ball, meaning Lord or owner in Northwe",
+      "reading": "[Voice A] little wrong. Now, a quick little Google search tells us that Baal, meaning Lord or owner in Northwe",
+      "status": "unreviewed"
+    }
+  ],
+  "conceptLinksOnCurrentPassages": 3,
+  "currentPassages": 178,
+  "importSeconds": 1.765167667
+}

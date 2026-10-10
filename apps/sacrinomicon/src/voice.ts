@@ -9,6 +9,8 @@ export class VoiceCapture {
   private duration = 0;
   private lead: Float32Array[] = [];
   private closed = false;
+  /** Ambient loudness, learned while nobody speaks, so a quiet room and a noisy one both work. */
+  private floor = 0.006;
   private constructor(stream: MediaStream, context: AudioContext, node: AudioWorkletNode, private canListen: () => boolean, private onUtterance: (pcm: Float32Array) => void, private onLevel: (level: number) => void) {
     this.stream = stream; this.context = context; this.node = node;
     node.port.onmessage = (event: MessageEvent<Float32Array>) => this.chunk(event.data);
@@ -31,13 +33,15 @@ export class VoiceCapture {
     const rms = Math.sqrt(frame.reduce((sum, n) => sum + n * n, 0) / frame.length);
     this.onLevel(Math.min(1, rms * 10));
     if (!this.canListen()) { this.reset(); return; }
+    const start = Math.max(.018, this.floor * 3.2), quiet = Math.max(.011, this.floor * 2);
     if (!this.voiced) {
-      this.lead.push(frame); if (this.lead.length * seconds > .3) this.lead.shift();
-      if (rms < .018) return;
+      this.lead.push(frame); if (this.lead.length * seconds > .35) this.lead.shift();
+      if (rms < start) { this.floor += (Math.min(rms, .05) - this.floor) * .04; return; }
       this.voiced = true; this.frames = [...this.lead]; this.lead = [];
     } else { this.frames.push(frame); }
-    this.duration += seconds; this.silence = rms < .012 ? this.silence + seconds : 0;
-    if (this.duration >= 29 || this.silence >= .8 && this.duration >= .5) {
+    // A thoughtful question pauses; wait a full second of quiet before answering.
+    this.duration += seconds; this.silence = rms < quiet ? this.silence + seconds : 0;
+    if (this.duration >= 29 || this.silence >= 1.05 && this.duration >= .6) {
       const combined = new Float32Array(this.frames.reduce((n, f) => n + f.length, 0));
       let position = 0; for (const f of this.frames) { combined.set(f, position); position += f.length; }
       const size = Math.min(480000, Math.floor(combined.length * 16000 / this.context.sampleRate));
@@ -47,7 +51,9 @@ export class VoiceCapture {
         const a = Math.floor(i * this.context.sampleRate / 16000), b = Math.max(a + 1, Math.floor((i + 1) * this.context.sampleRate / 16000));
         let sum = 0; for (let j = a; j < b && j < combined.length; j++) sum += combined[j]; pcm[i] = sum / (b - a);
       }
-      this.reset(); if (pcm.length >= 8000) this.onUtterance(pcm);
+      // A cough or click is not a question: require some sustained voice.
+      const voicedSeconds = this.duration - this.silence;
+      this.reset(); if (pcm.length >= 8000 && voicedSeconds >= .35) this.onUtterance(pcm);
     }
   }
   private reset() { this.frames = []; this.lead = []; this.voiced = false; this.duration = 0; this.silence = 0; }

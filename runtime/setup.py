@@ -48,7 +48,7 @@ def runtime_probe():
     import mlx_lm
     import librosa
     import torch
-    from transformers import Qwen2_5OmniForConditionalGeneration, Qwen2_5OmniProcessor
+    import transformers
     if not torch.backends.mps.is_available():
         raise ValueError("This desktop runtime requires Apple Silicon Metal support")
     # Importing is enough to check dependency compatibility; never load weights.
@@ -140,7 +140,7 @@ def install_snapshot(source, destination, spec, progress=lambda *_: None):
 def setup_model(request):
     catalog = request["catalog"]
     model = request["model"]
-    if model not in ("omni", "gemma"):
+    if model != "gemma":
         raise ValueError("Unknown desktop model")
     spec = catalog["models"][model]
     validate_catalog(spec)

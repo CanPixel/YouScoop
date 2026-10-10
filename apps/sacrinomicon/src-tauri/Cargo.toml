@@ -38,6 +38,16 @@ reqwest = { version = "0.12", default-features = false, features = ["stream", "r
 futures-util = "0.3"
 whisper-rs = { path = "../../../src-tauri/vendor/whisper-rs", default-features = false }
 
+# whisper.cpp and llama.cpp each link a static ggml (pinned to the same version,
+# see src-tauri/vendor/whisper-rs-sys/README-fork.md). The linker keeps whisper's
+# copy, so it must include Metal or the Oracle silently runs on the CPU.
+[target.'cfg(target_os = "macos")'.dependencies]
+whisper-rs = { path = "../../../src-tauri/vendor/whisper-rs", default-features = false, features = ["metal"] }
+# The Oracle's spoken voice: Kokoro neural speech through sherpa-onnx (CPU,
+# ONNX Runtime). YouScoop links the same pinned version beside llama.cpp.
+sherpa-onnx = "=1.13.8"
+sherpa-onnx-sys = "=1.13.8"
+
 [patch.crates-io]
 whisper-rs-sys = { path = "../../../src-tauri/vendor/whisper-rs-sys" }
 

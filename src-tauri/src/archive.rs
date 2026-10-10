@@ -24,8 +24,7 @@ pub fn library_root(app: &AppHandle) -> Result<PathBuf> {
 pub fn prepare(dir: &Path) -> Result<(SourcePackage, Vec<AssetInput>)> {
     let meta: VideoMeta = serde_json::from_slice(&std::fs::read(dir.join("meta.json"))?)?;
     if meta.status != "ready" { bail!("Finish processing the video before saving it"); }
-    let chunks: Vec<Chunk> = serde_json::from_slice::<Vec<Chunk>>(&std::fs::read(dir.join("index.json"))?)?
-        .into_iter().filter(|c| c.source != "audiovisual").collect();
+    let chunks: Vec<Chunk> = serde_json::from_slice(&std::fs::read(dir.join("index.json"))?)?;
     if chunks.is_empty() { bail!("This video has no indexed evidence"); }
     let source_id = stable_id("source", &if meta.url.is_empty() { format!("local:{}",meta.id) } else { meta.url.clone() });
     let mut inputs = Vec::new();
@@ -42,7 +41,7 @@ pub fn prepare(dir: &Path) -> Result<(SourcePackage, Vec<AssetInput>)> {
         Some(add(path.clone(), format!("original.{extension}"), "video")?)
     } else { None };
     let mut cues_id = None;
-    for (name, kind) in [("meta.json","source_metadata"),("cues.json","captions"),("index.json","raw_index"),("descriptions.json","visual_output"),("audiovisual.json","audiovisual_output"),("inspection-plan.json","inspection_coverage"),("frames.json","frame_manifest")] {
+    for (name, kind) in [("meta.json","source_metadata"),("cues.json","captions"),("index.json","raw_index"),("descriptions.json","visual_output"),("frames.json","frame_manifest"),("voices.json","voice_turns"),("ocr.json","ocr_output"),("spellings.json","spelling_suggestions")] {
         let path = dir.join(name);
         if path.is_file() {
             let id = add(path, name.into(), kind)?;
@@ -58,23 +57,42 @@ pub fn prepare(dir: &Path) -> Result<(SourcePackage, Vec<AssetInput>)> {
         let id = add(path, format!("frame-{i:04}.jpg"), "keyframe")?;
         frame_assets.push((frame.ts,id));
     }
+    // Each on-screen text passage links to the full-resolution frame it was read from.
+    let mut ocr_frames = Vec::new();
+    if let Some(record) = crate::onscreen::load(dir).filter(|r| r.complete) {
+        for screen in &record.screens {
+            let id = add(dir.join("ocr-frames").join(&screen.frame), screen.frame.clone(), "ocr_frame")?;
+            ocr_frames.push((screen.start, screen.end, id));
+        }
+    }
     if let Some(path) = &meta.thumb_path {
         if Path::new(path).is_file() { add(PathBuf::from(path),"thumbnail.jpg".into(),"thumbnail")?; }
     }
     let evidence: Vec<Evidence> = chunks.iter().map(|chunk| {
-        let visual = chunk.source == "vision";
-        let audiovisual = chunk.source == "audiovisual_reviewed";
-        let original_asset = if visual {
+        let frame = chunk.source == "frame";
+        let visual = chunk.source == "vision" || frame;
+        let ocr = chunk.source == "ocr";
+        let voiced = chunk.cues.iter().any(|c| c.voice.is_some());
+        let original_asset = if ocr {
+            ocr_frames.iter().find(|(start, end, _)| *start == chunk.start && *end == chunk.end).map(|(_, _, id)| id.clone()).or_else(||media_id.clone())
+        } else if visual {
             frame_assets.iter().min_by(|a,b|(a.0-chunk.start).abs().total_cmp(&(b.0-chunk.start).abs()))
                 .filter(|(ts,_)|(*ts-chunk.start).abs()<1.0).map(|(_,id)|id.clone()).or_else(||media_id.clone())
-        } else if audiovisual { media_id.clone() } else { cues_id.clone().or_else(||media_id.clone()) };
+        } else { cues_id.clone().or_else(||media_id.clone()) };
         Evidence {
             id: stable_id("evidence", &format!("{source_id}:{}:{}:{}:{}", chunk.source,chunk.start,chunk.end,chunk.text)),
             source_id:source_id.clone(), start:chunk.start.min(meta.duration_secs), end:chunk.end.min(meta.duration_secs), text:chunk.text.clone(),
-            kind: if visual { EvidenceKind::Visual } else if audiovisual { EvidenceKind::Audiovisual } else { EvidenceKind::Speech },
+            kind: if ocr { EvidenceKind::Document } else if visual { EvidenceKind::Visual } else { EvidenceKind::Speech },
             provenance:Provenance {
-                method:if visual { "sampled_frame_description" } else if audiovisual { "human_reviewed_audio_visual_observation" } else if meta.has_captions { "source_captions" } else { "speech_transcription" }.into(),
-                model:if visual { Some("SmolVLM2-2.2B-Instruct Q4_K_M".into()) } else if audiovisual { None } else if meta.has_captions { None } else { Some("whisper-large-v3-turbo Q5_0".into()) },
+                method:if ocr { "on_screen_text_ocr".into() } else if frame { "screen_frame_from_ocr".into() } else if visual { "sampled_frame_description".into() } else {
+                    format!("{}{}", if meta.has_captions { "source_captions" } else { "speech_transcription" }, if voiced { "_with_voice_clusters" } else { "" })
+                },
+                model:if ocr || frame { Some(crate::onscreen::ENGINE.into()) } else if visual { Some(crate::pipeline::frame_model_label(dir)) } else {
+                    let transcriber = (!meta.has_captions).then_some("whisper-large-v3-turbo Q5_0");
+                    let clusters = voiced.then_some(crate::voices::ENGINE);
+                    let parts: Vec<&str> = transcriber.into_iter().chain(clusters).collect();
+                    (!parts.is_empty()).then(|| parts.join("; "))
+                },
                 generated_at:meta.added_at, original_asset,
             }, vector:chunk.vector.clone(),
         }

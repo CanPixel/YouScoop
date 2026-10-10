@@ -51,7 +51,6 @@ pub fn defaults(app: &AppHandle) -> Result<WorkerConfig> {
             .join("bin/python")
             .to_string_lossy()
             .into(),
-        omni_model: model("omni"),
         gemma_model: model("gemma"),
     })
 }
@@ -222,10 +221,8 @@ fn remember_probe(app: &AppHandle, python: &str, probe: Value) -> Result<()> {
 }
 pub async fn configure(app: &AppHandle, state: &Arc<AppState>, cfg: &WorkerConfig) -> Result<()> {
     let _job = crate::memory::WorkerJob::begin(state)?;
-    for (id, model) in [("omni", &cfg.omni_model), ("gemma", &cfg.gemma_model)] {
-        if !model.is_empty() && !desktop_worker::valid_snapshot(Path::new(model), id) {
-            bail!("Select a complete compatible {id} snapshot directory");
-        }
+    if !cfg.gemma_model.is_empty() && !desktop_worker::valid_snapshot(Path::new(&cfg.gemma_model), "gemma") {
+        bail!("Select a complete compatible gemma snapshot directory");
     }
     let lease = setup_lease(app, state).await?;
     status(app, "Checking the configured Python runtime");
@@ -245,7 +242,7 @@ pub async fn setup_desktop_runtime(
 }
 async fn install_runtime(app: &AppHandle, state: &Arc<AppState>) -> Result<()> {
     if !cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        bail!("Desktop Omni/Gemma setup currently supports Apple Silicon Macs");
+        bail!("Desktop Gemma setup currently supports Apple Silicon Macs");
     }
     let _job = crate::memory::WorkerJob::begin(state)?;
     let os = std::process::Command::new("/usr/bin/sw_vers")
@@ -329,90 +326,26 @@ pub fn verify_desktop_setup(task: &str, source: Option<String>) -> Result<Value>
     tauri::async_runtime::block_on(async {
         match task {
             "runtime" => install_runtime(app.handle(), &state).await?,
-            "omni" | "gemma" => install_model(app.handle(), &state, task, source).await?,
+            "gemma" => install_model(app.handle(), &state, task, source).await?,
             "status" => {}
-            "batch-cancel-test" => {
-                let original=source.context("Supply an existing source ID")?;
-                let mut meta=crate::store::load_meta(app.handle(),&original)?;
-                let fixture=format!("verification-batch-{}",knowledge_core::now());
-                meta.id=fixture.clone();meta.duration_secs=20.0;
-                crate::store::save_meta(app.handle(),&meta)?;
-                let index=crate::store::load_index(app.handle(),&original)?.into_iter().filter(|c|c.start<20.0).map(|mut c|{c.end=c.end.min(20.0);c}).collect::<Vec<_>>();
-                crate::store::save_index(app.handle(),&fixture,&index)?;
-                let proof=async {
-                    let job=crate::memory::WorkerJob::begin(&state)?;
-                    let cancelled=crate::batch_inspection::batch_with_cancel(app.handle(),&state,&fixture,Some(1)).await;
-                    anyhow::ensure!(cancelled.is_err(),"Expected actual worker cancellation");
-                    let checkpoint=desktop_worker::moments(app.handle(),&fixture)?;
-                    anyhow::ensure!(checkpoint.len()==1,"First completed moment was not checkpointed");
-                    drop(job);
-                    let _job=crate::memory::WorkerJob::begin(&state)?;
-                    let resumed=crate::batch_inspection::batch(app.handle(),&state,&fixture).await?;
-                    anyhow::ensure!(resumed.len()==2 && resumed[0].text==checkpoint[0].text,"Resume lost or duplicated checkpoint work");
-                    Ok::<_,anyhow::Error>(json!({"cancelledAfterMoments":checkpoint.len(),"resumedMoments":resumed.len(),"preservedFirstOutput":true}))
-                }.await;
-                let _=std::fs::remove_dir_all(crate::store::video_dir_path(app.handle(),&fixture)?);
-                return proof;
-            }
             "gemma-source" => {
                 let id = source.context("Gemma diagnostic requires a video ID")?;
                 let answer=desktop_worker::ask_source(app.handle(),&state,&id,"Reconstruct the main argument from the supplied passages. Distinguish source assertions, quoted responses and interpretation. Cite supporting passage IDs.".into(),vec![]).await.map_err(anyhow::Error::msg)?;
                 return Ok(serde_json::to_value(answer)?);
-            }
-            "review-proof" => {
-                let original=source.context("Review diagnostic requires a video ID")?;
-                let mut meta=crate::store::load_meta(app.handle(),&original)?;
-                let fixture=format!("verification-review-{}",knowledge_core::now());
-                meta.id=fixture.clone();meta.url=String::new();meta.summary=None;
-                crate::store::save_meta(app.handle(),&meta)?;
-                let dir=crate::store::video_dir_path(app.handle(),&fixture)?;
-                let proof=async {
-                    let mut index=crate::store::load_index(app.handle(),&original)?.into_iter()
-                        .filter(|c|c.source=="speech").take(1).collect::<Vec<_>>();
-                    let raw="Imaginary wire amount 123-456-7890 repeated by a model";
-                    index.push(crate::store::Chunk {start:452.0,end:462.0,text:raw.into(),
-                        source:"audiovisual".into(),vector:vec![1.0;384],cues:vec![]});
-                    crate::store::save_index(app.handle(),&fixture,&index)?;
-                    let moment=desktop_worker::Moment {start:452.0,end:462.0,text:raw.into(),question:"Test".into(),
-                        model:"Omni".into(),generated_at:knowledge_core::now(),elapsed_seconds:0.0,truncated:true};
-                    std::fs::write(dir.join("audiovisual.json"),serde_json::to_vec(&vec![moment])?)?;
-                    let observation="A presenter appears beside a document; the account text is not independently confirmed.";
-                    desktop_worker::review(app.handle(),&state,&fixture,452.0,462.0,observation).await?;
-                    let indexed=crate::store::load_index(app.handle(),&fixture)?;
-                    let matches=crate::rag::retrieve(&indexed,&vec![1.0;384],"imaginary account",10);
-                    anyhow::ensure!(matches.iter().all(|c|c.source!="audiovisual"),"Raw model output was searchable");
-                    let (package,_)=crate::archive::prepare(&dir)?;
-                    anyhow::ensure!(package.evidence.iter().all(|e|e.text!=raw),"Raw model output was archived as evidence");
-                    anyhow::ensure!(package.evidence.iter().any(|e|e.text==observation && e.provenance.method=="human_reviewed_audio_visual_observation"),"Reviewed observation was missing from the archive");
-                    anyhow::ensure!(dir.join("audiovisual.json").is_file(),"Raw model artifact was lost");
-                    desktop_worker::remove_review_moment(app.handle().clone(),fixture.clone(),452.0,462.0).map_err(anyhow::Error::msg)?;
-                    let (after,_)=crate::archive::prepare(&dir)?;
-                    anyhow::ensure!(!after.evidence.iter().any(|e|e.text==observation),"Removed observation remained in current export");
-                    Ok::<_,anyhow::Error>(json!({"rawSearchable":false,"rawEvidence":false,"reviewedEvidence":true,"rawArtifactPreserved":true,"removalWorks":true}))
-                }.await;
-                let _=std::fs::remove_dir_all(&dir);
-                return proof;
-            }
-            "batch" => {
-                let id = source.context("Batch diagnostic requires a video ID")?;
-                let _job = crate::memory::WorkerJob::begin(&state)?;
-                let result = crate::batch_inspection::batch(app.handle(), &state, &id).await?;
-                return Ok(json!({"videoId":id,"moments":result}));
             }
             "worker" => {
                 let path = source.context("Worker diagnostic requires a request JSON file")?;
                 let mut request: Value = serde_json::from_slice(&std::fs::read(path)?)?;
                 let cfg = desktop_worker::config(app.handle())?;
                 request["model"] = match request["task"].as_str() {
-                    Some("omni") => json!(cfg.omni_model),
                     Some("gemma") => json!(cfg.gemma_model),
-                    _ => bail!("Choose an Omni or Gemma worker diagnostic"),
+                    _ => bail!("Choose a Gemma worker diagnostic"),
                 };
                 let _job = crate::memory::WorkerJob::begin(&state)?;
                 let events = desktop_worker::run(app.handle(), &state, request, |_| {}).await?;
                 return Ok(json!({"events": events}));
             }
-            _ => bail!("Choose runtime, omni, gemma, or status"),
+            _ => bail!("Choose runtime, gemma, or status"),
         }
         Ok(serde_json::to_value(
             desktop_worker::worker_status(app.handle().clone()).map_err(anyhow::Error::msg)?,
@@ -437,7 +370,7 @@ async fn install_model(
     model: &str,
     source: Option<String>,
 ) -> Result<()> {
-    if !["omni", "gemma"].contains(&model) {
+    if model != "gemma" {
         bail!("Unknown desktop model");
     }
     let _job = crate::memory::WorkerJob::begin(state)?;
@@ -460,11 +393,7 @@ async fn install_model(
         return Err(anyhow!("Installed model snapshot is incomplete"));
     }
     let mut cfg = desktop_worker::config(app)?;
-    if model == "omni" {
-        cfg.omni_model = path.into();
-    } else {
-        cfg.gemma_model = path.into();
-    }
+    cfg.gemma_model = path.into();
     desktop_worker::save_config(app, &cfg)?;
     status(app, &format!("{model} installed and verified"));
     Ok(())
