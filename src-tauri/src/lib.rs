@@ -1,5 +1,10 @@
+pub mod investigation;
 pub mod llm;
+mod digest;
 mod media;
+mod onscreen;
+mod spelling;
+pub mod voices;
 mod models;
 mod pipeline;
 pub mod rag;
@@ -7,7 +12,42 @@ mod state;
 pub mod store;
 pub mod stt;
 mod vtt;
+mod wizmuth;
 mod ytdlp;
+mod desktop_worker;
+mod runtime_setup;
+#[cfg(feature = "diagnostics")]
+pub use runtime_setup::verify_desktop_setup;
+
+/// Run voice separation and on-screen text on one library video without a
+/// window. Used for native verification.
+#[cfg(feature = "diagnostics")]
+pub fn verify_enrichment(video_id: &str) -> anyhow::Result<serde_json::Value> {
+    let mut context = app_context();
+    context.config_mut().app.windows.clear();
+    let app = tauri::Builder::default().build(context)?;
+    let handle = app.handle().clone();
+    let state = Arc::new(AppState::new());
+    tauri::async_runtime::block_on(async {
+        let scope = memory::normal(&handle, &state, Arc::new(std::sync::atomic::AtomicBool::new(false))).await?;
+        ensure_engine(&handle, &state, &scope.admission).await.map_err(anyhow::Error::msg)?;
+        let mut meta = store::load_meta(&handle, video_id)?;
+        let started = std::time::Instant::now();
+        pipeline::enrich(&handle, &state, &mut meta, &Arc::new(std::sync::atomic::AtomicBool::new(false))).await?;
+        let elapsed = started.elapsed().as_secs_f64();
+        let index = store::load_index(&handle, video_id)?;
+        let mut sources = std::collections::BTreeMap::<String, usize>::new();
+        for chunk in &index { *sources.entry(chunk.source.clone()).or_default() += 1; }
+        let dir = store::video_dir_path(&handle, video_id)?;
+        Ok(serde_json::json!({
+            "analysis": meta.analysis, "elapsedSeconds": elapsed, "indexBySource": sources,
+            "voices": voices::load(&dir).map(|v| v.voices),
+            "screens": onscreen::load(&dir).map(|r| r.screens.len()),
+            "spellings": spelling::load(&dir),
+        }))
+    })
+}
+mod memory;
 
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -25,6 +65,17 @@ fn err_str(e: impl std::fmt::Display) -> String {
 }
 
 // ---------- Setup / models ----------
+
+#[tauri::command]
+async fn send_video_to_wizmuth(app: AppHandle, id: String, today: String) -> CmdResult<wizmuth::SentNote> {
+    tauri::async_runtime::spawn_blocking(move || wizmuth::send_video(&app, &id, &today))
+        .await.map_err(err_str)?.map_err(err_str)
+}
+#[tauri::command]
+async fn send_answer_to_wizmuth(app: AppHandle, id: String, question: String, answer: String, today: String) -> CmdResult<wizmuth::SentNote> {
+    tauri::async_runtime::spawn_blocking(move || wizmuth::send_answer(&app, &id, &question, &answer, &today))
+        .await.map_err(err_str)?.map_err(err_str)
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -90,7 +141,7 @@ struct EngineStatus {
 /// Make sure the engine is loaded, starting or waiting for a load as needed.
 /// Callers that need inference (adding videos, asking questions) funnel
 /// through here, so the UI can open before the multi-GB models are resident.
-async fn ensure_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), String> {
+async fn ensure_engine(app: &AppHandle, state: &Arc<AppState>, admission:&inference_coordinator::Admission) -> Result<(), String> {
     loop {
         if state.engine_loaded() {
             return Ok(());
@@ -101,6 +152,10 @@ async fn ensure_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), Str
             continue;
         }
         // We own the load now.
+        struct Loading<'a>(&'a std::sync::atomic::AtomicBool);
+        impl Drop for Loading<'_>{fn drop(&mut self){self.0.store(false,Ordering::SeqCst);}}
+        let _loading=Loading(&state.engine_loading);
+        memory::resident(app,state,admission).map_err(err_str)?;
         return do_load_engine(app, state).await;
     }
 }
@@ -120,7 +175,6 @@ async fn do_load_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), St
         (&embed, "embeddings"),
     ] {
         if !p.exists() {
-            state.engine_loading.store(false, Ordering::SeqCst);
             let msg = format!("{name} model is missing: download it first.");
             let _ = app.emit(
                 "engine-status",
@@ -141,7 +195,6 @@ async fn do_load_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), St
     .await
     .map_err(err_str);
 
-    state.engine_loading.store(false, Ordering::SeqCst);
     match result.and_then(|r| r.map_err(err_str)) {
         Ok(engine) => {
             *state.engine.lock().unwrap() = Some(engine);
@@ -161,7 +214,8 @@ async fn do_load_engine(app: &AppHandle, state: &Arc<AppState>) -> Result<(), St
 #[tauri::command]
 async fn load_engine(app: AppHandle, state: State<'_, Arc<AppState>>) -> CmdResult<()> {
     let state = state.inner().clone();
-    ensure_engine(&app, &state).await
+    let scope=memory::normal(&app,&state,Arc::new(std::sync::atomic::AtomicBool::new(false))).await.map_err(err_str)?;
+    ensure_engine(&app, &state,&scope.admission).await
 }
 
 // ---------- Library ----------
@@ -176,7 +230,17 @@ fn library(app: AppHandle) -> CmdResult<Vec<VideoMeta>> {
 struct VideoDetail {
     meta: VideoMeta,
     chunks: Vec<ChunkPublic>,
-    transcript: Vec<vtt::Cue>,
+    transcript: Vec<TranscriptCue>,
+    /// Speaking time per voice, when voice separation ran.
+    voices: Vec<voices::VoiceSummary>,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TranscriptCue {
+    start: f64,
+    end: f64,
+    text: String,
+    voice: Option<String>,
 }
 
 #[tauri::command]
@@ -185,8 +249,15 @@ fn video_detail(app: AppHandle, id: String) -> CmdResult<VideoDetail> {
     let chunks = store::load_index(&app, &id)
         .map(|cs| cs.iter().map(ChunkPublic::from).collect())
         .unwrap_or_default();
-    let transcript = store::load_cues(&app, &id).unwrap_or_default();
-    Ok(VideoDetail { meta, chunks, transcript })
+    let cues = store::load_cues(&app, &id).unwrap_or_default();
+    let record = store::video_dir_path(&app, &id).ok().and_then(|dir| voices::load(&dir));
+    let assigned = record.as_ref().map(|r| voices::assign(&cues, &r.turns)).unwrap_or_default();
+    let transcript = cues
+        .into_iter()
+        .enumerate()
+        .map(|(i, c)| TranscriptCue { start: c.start, end: c.end, text: c.text, voice: assigned.get(i).cloned().flatten() })
+        .collect();
+    Ok(VideoDetail { meta, chunks, transcript, voices: record.map(|r| r.voices).unwrap_or_default() })
 }
 
 /// Wait for the engine, then run the given ingest future; engine-load
@@ -197,7 +268,10 @@ where
     Fut: std::future::Future<Output = ()> + Send,
 {
     tauri::async_runtime::spawn(async move {
-        if let Err(e) = ensure_engine(&app, &state).await {
+        let scope=match memory::normal(&app,&state,Arc::new(std::sync::atomic::AtomicBool::new(false))).await {
+            Ok(scope)=>scope,Err(e)=>{pipeline::emit_global_error(&app,e.to_string());return;}
+        };
+        if let Err(e) = ensure_engine(&app, &state,&scope.admission).await {
             pipeline::emit_global_error(&app, e);
             return;
         }
@@ -238,6 +312,20 @@ fn retry_video(app: AppHandle, state: State<'_, Arc<AppState>>, id: String) -> C
     spawn_ingest(app, state.inner().clone(), move |app, state| {
         pipeline::resume(app, state, meta)
     });
+    Ok(())
+}
+
+/// Add voice separation and on-screen text to a ready video, keeping it usable.
+#[tauri::command]
+fn update_analysis(app: AppHandle, state: State<'_, Arc<AppState>>, id: String) -> CmdResult<()> {
+    let meta = store::load_meta(&app, &id).map_err(err_str)?;
+    if meta.status != "ready" {
+        return Err("Finish processing the video first.".into());
+    }
+    if !pipeline::needs_enrichment(&meta) {
+        return Err("This video's analysis is already up to date.".into());
+    }
+    spawn_ingest(app, state.inner().clone(), move |app, state| pipeline::update_analysis(app, state, meta));
     Ok(())
 }
 
@@ -335,10 +423,11 @@ async fn ask_video(
     }
     let chunks = store::load_index(&app, &video_id).map_err(err_str)?;
     let state = state.inner().clone();
-    ensure_engine(&app, &state).await?;
+    state.chat_cancel.store(false, Ordering::Relaxed);
+    let scope=memory::normal(&app,&state,state.chat_cancel.clone()).await.map_err(err_str)?;
+    ensure_engine(&app, &state,&scope.admission).await?;
     let engine = state.require_engine().map_err(err_str)?;
 
-    state.chat_cancel.store(false, Ordering::Relaxed);
     let cancel = state.chat_cancel.clone();
     let history: Vec<rag::HistoryTurn> = history
         .into_iter()
@@ -370,8 +459,17 @@ async fn ask_video(
             .into_iter()
             .next()
             .ok_or_else(|| anyhow::anyhow!("query embedding failed"))?;
-        let excerpts = rag::retrieve(&chunks, &query_vec, &retrieval_q, 6);
-        let prompt = rag::build_chat_prompt(&meta, &excerpts, &history, &q);
+        // "Which emails are shown?" needs every email screen, not the six most similar passages.
+        let listed = rag::listing(&chunks, &q, 16);
+        let excerpts: Vec<&store::Chunk> = match &listed {
+            Some((found, _)) => found.iter().collect(),
+            None => rag::retrieve(&chunks, &query_vec, &retrieval_q, 6),
+        };
+        let asked = match &listed {
+            Some((_, note)) => format!("{q}\n\n{note}"),
+            None => q.clone(),
+        };
+        let prompt = rag::build_chat_prompt(&meta, &excerpts, &history, &asked);
         let sources: Vec<SourceRef> = excerpts
             .iter()
             .map(|c| SourceRef {
@@ -388,7 +486,8 @@ async fn ask_video(
                 &ChatToken { video_id: vid.clone(), token: piece.to_string() },
             );
         };
-        let answer = engine.chat(&prompt, 512, &cancel, &mut on_token)?;
+        // A complete list needs more room than a direct answer.
+        let answer = engine.chat(&prompt, if listed.is_some() { 1100 } else { 512 }, &cancel, &mut on_token)?;
         // The model streams its own citations, which it routinely points at the
         // wrong excerpt line. Re-point them against the lines it was actually
         // shown before returning; the frontend replaces the streamed text with
@@ -418,9 +517,18 @@ pub fn run() {
         .manage(Arc::new(AppState::new()))
         .setup(|app| {
             store::cleanup_orphans(app.handle());
+            memory::watch(app.handle().clone(),tauri::Manager::state::<Arc<AppState>>(app).inner().clone())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            desktop_worker::worker_status,
+            desktop_worker::configure_worker,
+            runtime_setup::setup_desktop_runtime,
+            runtime_setup::install_desktop_model,
+            desktop_worker::ask_gemma,
+            desktop_worker::stop_worker,
+            send_video_to_wizmuth,
+            send_answer_to_wizmuth,
             setup_status,
             download_model,
             update_ytdlp,
@@ -430,12 +538,13 @@ pub fn run() {
             add_video,
             add_local_video,
             retry_video,
+            update_analysis,
             cancel_ingest,
             remove_video,
             ask_video,
             stop_chat,
         ])
-        .build(tauri::generate_context!())
+        .build(app_context())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
             if let tauri::RunEvent::Exit = event {
@@ -448,4 +557,8 @@ pub fn run() {
                 drop(whisper);
             }
         });
+}
+
+fn app_context() -> tauri::Context<tauri::Wry> {
+    tauri::generate_context!()
 }

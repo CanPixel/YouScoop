@@ -1,0 +1,16 @@
+{
+  "model": "out/model-trial/hf/hub/models--Qwen--Qwen2.5-Omni-3B/snapshots/f75b40e3da2003cdd6e1829b1f420ca70797c34e",
+  "runtime": "transformers-mps-fp16",
+  "video": "out/model-trial/evidence-390-400-original.mp4",
+  "audio_in_video": true,
+  "question": "Use both audio and video. First transcribe ONLY the speakers audible words verbatim, not the printed document. Then identify the visible Bank name and Account Name fields. Do not transcribe routing or account numbers: they are redacted. Keep uncertain OCR literal and marked uncertain. Finally say whether the visible account name supports the speakers claim. A printed occurrence of a word in another field is not an account name. Do not assume document authenticity.",
+  "speech_output": false,
+  "load_seconds": 6.171199708012864,
+  "processing_and_generation_seconds": 5.170368083985522,
+  "input_tokens": 1621,
+  "output_tokens": 59,
+  "answer": "Speaker 1: 'denial because this document from the files has Jeffrey Epstein depositing money into an account that he has named ball now obviously it could be some'. Bank name: 'Wachovia Bank, N.A.'. Account Name: 'One Clearlake Centre, LLC'.",
+  "mps_allocated_gb": 9.481875712,
+  "mps_driver_gb": 12.052119552,
+  "process_peak_rss_gb": 14.130348032
+}

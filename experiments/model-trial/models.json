@@ -1,0 +1,19 @@
+{
+  "gemma": {
+    "repo": "mlx-community/gemma-4-26b-a4b-it-4bit",
+    "revision": "0d77464eeb233a2da68ebf9d7dc4edaac7db956d",
+    "role": "text-only argument synthesis via mlx-lm"
+  },
+  "omni_quantized": {
+    "repo": "ggml-org/Qwen2.5-Omni-7B-GGUF",
+    "revision": "89b785438c8901d4635e42f50480ba5985a1bbf1",
+    "weights": "Qwen2.5-Omni-7B-Q4_K_M.gguf",
+    "projector": "mmproj-Qwen2.5-Omni-7B-Q8_0.gguf",
+    "role": "audio/image input; native video support must be tested"
+  },
+  "omni_native_reference": {
+    "repo": "Qwen/Qwen2.5-Omni-3B",
+    "revision": "f75b40e3da2003cdd6e1829b1f420ca70797c34e",
+    "role": "native synchronized video/audio reference via Transformers MPS"
+  }
+}

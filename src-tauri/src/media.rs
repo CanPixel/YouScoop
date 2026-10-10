@@ -7,7 +7,7 @@ use tokio::process::Command;
 
 use crate::ytdlp::find_ffmpeg;
 
-fn ffmpeg_cmd() -> Result<Command> {
+pub(crate) fn ffmpeg_cmd() -> Result<Command> {
     let ffmpeg = find_ffmpeg().ok_or_else(|| {
         anyhow!("ffmpeg not found: install it with `brew install ffmpeg` and restart YouScoop")
     })?;
@@ -20,6 +20,9 @@ fn ffmpeg_cmd() -> Result<Command> {
 const MAX_FRAMES: usize = 60;
 /// Scene-change score above which a frame is kept (0..1, ffmpeg `scene`).
 const SCENE_THRESHOLD: f64 = 0.24;
+/// Scene changes closer than this to the last kept frame are skipped: a
+/// flashing overlay otherwise yields a burst of near-identical frames.
+const MIN_SPACING_SECS: f64 = 3.0;
 
 /// Extract keyframes at scene changes, scaled to 512px wide JPEGs.
 /// Returns (timestamp_secs, path) pairs sorted by timestamp.
@@ -64,7 +67,7 @@ async fn extract_frames_scene(
         .arg(video)
         .arg("-vf")
         .arg(format!(
-            "select='gt(scene,{SCENE_THRESHOLD})+isnan(prev_selected_t)+gte(t-prev_selected_t,{gap:.2})',\
+            "select='isnan(prev_selected_t)+gt(scene,{SCENE_THRESHOLD})*gte(t-prev_selected_t,{MIN_SPACING_SECS})+gte(t-prev_selected_t,{gap:.2})',\
              showinfo,scale=512:-2"
         ))
         .arg("-fps_mode")
@@ -112,25 +115,45 @@ async fn extract_frames_scene(
     Ok(frames)
 }
 
-/// Keep `keep` frames spread evenly across the list; delete the rest from disk.
+/// Keep at most `keep` frames spread across time; delete the rest from disk.
+///
+/// Picking every n-th frame by position follows the scene detector, so busy
+/// stretches (a flashing overlay, scrolling documents) took clusters of
+/// near-identical frames. Instead keep each frame that comes at least `s`
+/// seconds after the last kept one, with the smallest `s` that fits.
 fn thin_frames(frames: Vec<(f64, PathBuf)>, keep: usize) -> Vec<(f64, PathBuf)> {
-    let n = frames.len();
-    let mut kept = Vec::with_capacity(keep);
-    let mut next_pick = 0usize;
+    let times: Vec<f64> = frames.iter().map(|f| f.0).collect();
+    let (mut low, mut high) = (0.0, times.last().copied().unwrap_or(0.0) + 1.0);
+    for _ in 0..40 {
+        let mid = (low + high) / 2.0;
+        if spaced(&times, mid).len() <= keep {
+            high = mid;
+        } else {
+            low = mid;
+        }
+    }
+    let picked = spaced(&times, high);
+    let mut kept = Vec::with_capacity(picked.len());
     for (i, frame) in frames.into_iter().enumerate() {
-        // Even spread: pick indices round(k * (n-1) / (keep-1)).
-        if kept.len() < keep && i == next_pick {
+        if picked.binary_search(&i).is_ok() {
             kept.push(frame);
-            next_pick = if kept.len() < keep {
-                (kept.len() * (n - 1) + (keep - 1) / 2) / (keep - 1)
-            } else {
-                usize::MAX
-            };
         } else {
             let _ = std::fs::remove_file(&frame.1);
         }
     }
     kept
+}
+
+/// Indices of the frames kept when each must follow the last kept one by at
+/// least `spacing` seconds.
+fn spaced(times: &[f64], spacing: f64) -> Vec<usize> {
+    let mut picked: Vec<usize> = Vec::new();
+    for (i, &t) in times.iter().enumerate() {
+        if picked.last().is_none_or(|&last| t - times[last] >= spacing) {
+            picked.push(i);
+        }
+    }
+    picked
 }
 
 fn clear_jpgs(dir: &Path) -> Result<()> {
@@ -250,4 +273,22 @@ pub async fn extract_audio_f32(video: &Path) -> Result<Vec<f32>> {
         samples.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
     }
     Ok(samples)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::thin_frames;
+    use std::path::PathBuf;
+
+    #[test]
+    fn thinning_spreads_frames_across_time_not_bursts() {
+        // A burst of 20 scene changes in 20 seconds, then 10 changes over 300.
+        let mut times: Vec<f64> = (0..20).map(|i| 100.0 + i as f64).collect();
+        times.extend((0..10).map(|i| 200.0 + 30.0 * i as f64));
+        let frames = times.iter().map(|&t| (t, PathBuf::from(format!("/nonexistent/{t}.jpg")))).collect();
+        let kept: Vec<f64> = thin_frames(frames, 12).into_iter().map(|f| f.0).collect();
+        assert!(kept.len() <= 12 && kept.len() >= 10, "{kept:?}");
+        assert!(kept.iter().filter(|&&t| t < 120.0).count() <= 2, "{kept:?}");
+        assert!(kept.iter().filter(|&&t| t >= 200.0).count() >= 9, "{kept:?}");
+    }
 }

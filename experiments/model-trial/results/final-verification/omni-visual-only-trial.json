@@ -1,0 +1,70 @@
+{
+  "question": "In one short sentence, describe only what the camera shows. Ignore the spoken words. Do not quote or guess on-screen text, names, dates, numbers, or what a document proves.",
+  "events": [
+    {
+      "kind": "status",
+      "detail": "Loading Omni 3B on Apple MPS"
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 1/4"
+    },
+    {
+      "kind": "moment",
+      "start": 0.0,
+      "end": 10.0,
+      "answer": "A man wearing a black cap and jacket sits in front of a microphone.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.8517343329731375,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 2/4"
+    },
+    {
+      "kind": "moment",
+      "start": 452.033333,
+      "end": 462.033333,
+      "answer": "A person is sitting at a desk with a laptop and a microphone, pointing at a screen.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.3052671251352876,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 3/4"
+    },
+    {
+      "kind": "moment",
+      "start": 878.933333,
+      "end": 888.933333,
+      "answer": "A person is speaking into a microphone while wearing a black jacket and a cap with a white letter 'Y' on it.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.4630625410936773,
+      "truncated": false
+    },
+    {
+      "kind": "status",
+      "detail": "Listening and watching moment 4/4"
+    },
+    {
+      "kind": "moment",
+      "start": 1925.7,
+      "end": 1935.7,
+      "answer": "A person is sitting in front of a microphone, wearing a black hoodie and a cap with a white letter 'Y' on it.",
+      "inputTokens": 1586,
+      "elapsedSeconds": 2.5587360828649253,
+      "truncated": false
+    },
+    {
+      "kind": "result",
+      "answer": "",
+      "elapsedSeconds": 18.287899666000158,
+      "peakMemoryGb": 9.76191488,
+      "truncated": false
+    }
+  ],
+  "stderrTail": " got 151652. This may result in unexpected behavior.\n[transformers] Model config: vision_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151653. This may result in unexpected behavior.\n[transformers] Model config: audio_start_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151647. This may result in unexpected behavior.\n[transformers] Model config: audio_end_token_id must be `None` or an integer within the vocabulary (between 0 and 8447), got 151648. This may result in unexpected behavior.\n[transformers] Qwen2VL video processing does not apply the per-frame pixel cap the reference implementation (qwen-vl-utils) applies, so some videos cost far more tokens than they would there. In v5.22 the capped behavior will become the default and `cap_pixels_per_frame` will be removed. Pass `cap_pixels_per_frame=True` to adopt the reference behavior now, or `False` to keep the current behavior and silence this warning.\n",
+  "exitCode": 0
+}

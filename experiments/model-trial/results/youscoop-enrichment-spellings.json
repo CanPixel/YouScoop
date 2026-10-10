@@ -1,0 +1,133 @@
+{
+  "analysis": [
+    "voices",
+    "onscreen:2",
+    "scenes:2",
+    "spellings"
+  ],
+  "archive": "/private/tmp/claude-501/-Users-canur-Projects-Can-YouScoop/53fe1c39-fbb8-4f4b-8bd6-23d427020d11/scratchpad/enrich5/library",
+  "artifactCount": 133,
+  "elapsedSeconds": 14.095374917000001,
+  "evidenceCount": 178,
+  "indexBySource": {
+    "audiovisual": 12,
+    "frame": 6,
+    "ocr": 61,
+    "speech": 57,
+    "vision": 54
+  },
+  "package": "/private/tmp/claude-501/-Users-canur-Projects-Can-YouScoop/53fe1c39-fbb8-4f4b-8bd6-23d427020d11/scratchpad/enrich5/exports/c49e4bbdd65cc1d6ad44493084081e75877f4774a892bf40e44f0c809478fc26.sacri",
+  "screens": 61,
+  "spellings": {
+    "method": "phonetic match to on-screen text, confirmed by Whisper large-v3-turbo re-transcription",
+    "rejected": [
+      {
+        "moments": [
+          574.08,
+          623.36,
+          656.24
+        ],
+        "original": "Moolok",
+        "screens": 3,
+        "suggested": "Molek"
+      }
+    ],
+    "suggestions": [
+      {
+        "captionUses": 39,
+        "checks": [
+          {
+            "at": 313.36,
+            "withHint": "But they need to understand that the vampire's ball is coming to an end. Now when this interview came out, many thought Putin was",
+            "withoutHint": "but they need to understand that the vampire's ball is coming to an end. Now when this interview came out, many thought Putin was"
+          },
+          {
+            "at": 478.96,
+            "withHint": "I don't see any evidence that he had an account named Baal except for in the one instance where it's actually named Baal and there's just a few people.",
+            "withoutHint": "he had in a bank account named Ball. I don't see any evidence that he had an account named Ball except for in the one instance where it's actually named Ball and there's"
+          },
+          {
+            "at": 562.959,
+            "withHint": "Right now, we're going to dive into Baal and Malachian Sacrifice and tie this to the Epstein files because it's absolutely connected.",
+            "withoutHint": "Right now, we're going to dive into Ball and Malachian Sacrifice and tie this to the Epstein files because it's absolutely connected."
+          }
+        ],
+        "evidence": "heard with the on-screen spelling as a hint",
+        "keptOriginalAt": [
+          313.36
+        ],
+        "original": "Ball",
+        "screens": 8,
+        "suggested": "Baal"
+      },
+      {
+        "captionUses": 15,
+        "checks": [
+          {
+            "at": 574.08,
+            "withHint": "A deity named Moloch. Now this is where things get a little bit tricky. Baal is actually the name of an ancient Canaanite",
+            "withoutHint": "a deity named Moloch. Now this is where things get a little bit tricky. Baal is actually the name of an ancient Canaan"
+          },
+          {
+            "at": 623.36,
+            "withHint": "They were doing the sacrifices too, but Moloch is actually a type of sacrifice.",
+            "withoutHint": "were doing the sacrifices too. But Moloch is actually a type of sacrifice."
+          },
+          {
+            "at": 656.24,
+            "withHint": "Now, due to this belief, Moloch has become synonymous with the",
+            "withoutHint": "originally bald. Now, due to this belief, Moloch has become synonymous with the"
+          }
+        ],
+        "evidence": "heard without a hint",
+        "keptOriginalAt": [],
+        "original": "Moolok",
+        "screens": 6,
+        "suggested": "Moloch"
+      },
+      {
+        "captionUses": 7,
+        "checks": [
+          {
+            "at": 610.24,
+            "withHint": "to the deity named Baal. However, when early translations were coming out of",
+            "withoutHint": "to the deity named Baal. However, when early translations were coming out of"
+          },
+          {
+            "at": 1362.0,
+            "withHint": "The 250 prophets of Baal had a war or a competition, I guess, whatever, with Elijah.",
+            "withoutHint": "prophets of Baal had a war or a competition, I guess, whatever, with Elijah. Now, this is"
+          },
+          {
+            "at": 1399.44,
+            "withHint": "They were in competition with the 450 prophets of Baal. The prophets of Baal were cutting themselves and screaming and whaling.",
+            "withoutHint": "competition with the 450 prophets of Baal. The prophets of Baal were cutting themselves and screaming and"
+          }
+        ],
+        "evidence": "heard without a hint",
+        "keptOriginalAt": [],
+        "original": "Bal",
+        "screens": 8,
+        "suggested": "Baal"
+      }
+    ]
+  },
+  "voices": [
+    {
+      "seconds": 1859.7,
+      "voice": "Voice A"
+    },
+    {
+      "seconds": 67.5,
+      "voice": "Voice B"
+    },
+    {
+      "seconds": 0.8,
+      "voice": "Voice C"
+    },
+    {
+      "seconds": 0.3,
+      "voice": "Voice D"
+    }
+  ]
+}

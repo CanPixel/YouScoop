@@ -10,7 +10,13 @@ import type {
   SetupStatus,
   VideoDetail,
   VideoMeta,
+  SentNote,
+  WorkerStatus,
+  WorkerConfig,
 } from "./types";
+
+/** Local date as 2026-10-10, for note front matter. */
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 export const api = {
   setupStatus: () => invoke<SetupStatus>("setup_status"),
@@ -19,16 +25,31 @@ export const api = {
   loadEngine: () => invoke<void>("load_engine"),
   library: () => invoke<VideoMeta[]>("library"),
   videoDetail: (id: string) => invoke<VideoDetail>("video_detail", { id }),
+  sendVideoToWizmuth: (id: string) => invoke<SentNote>("send_video_to_wizmuth", { id, today: today() }),
+  sendAnswerToWizmuth: (id: string, question: string, answer: string) => invoke<SentNote>("send_answer_to_wizmuth", { id, question, answer, today: today() }),
   addVideo: (url: string) => invoke<void>("add_video", { url }),
   retryVideo: (id: string) => invoke<void>("retry_video", { id }),
+  updateAnalysis: (id: string) => invoke<void>("update_analysis", { id }),
   cancelIngest: (id: string) => invoke<void>("cancel_ingest", { id }),
   removeVideo: (id: string) => invoke<void>("remove_video", { id }),
   askVideo: (videoId: string, question: string, history: { question: string; answer: string }[]) =>
     invoke<ChatAnswer>("ask_video", { videoId, question, history }),
   stopChat: () => invoke<void>("stop_chat"),
+  workerStatus: () => invoke<WorkerStatus>("worker_status"),
+  configureWorker: (config: WorkerConfig) => invoke<void>("configure_worker", { config }),
+  setupDesktopRuntime: () => invoke<WorkerStatus>("setup_desktop_runtime"),
+  installDesktopModel: (model: "gemma", source: string | null) => invoke<WorkerStatus>("install_desktop_model", { model, source }),
+  askGemma: (videoId: string, question: string, history: {question: string; answer: string}[]) => invoke<ChatAnswer>("ask_gemma", { videoId, question, history }),
+  stopWorker: () => invoke<void>("stop_worker"),
 };
 
 export const events = {
+  onRuntimeProgress: (cb: (p: { kind: string; detail?: string; received?: number; total?: number }) => void): Promise<UnlistenFn> =>
+    listen<{ kind: string; detail?: string; received?: number; total?: number }>("runtime-progress", (e) => cb(e.payload)),
+  onInferenceStatus: (cb: (status: string) => void): Promise<UnlistenFn> =>
+    listen<string>("inference-status", (e) => cb(e.payload)),
+  onWorkerProgress: (cb: (p: { kind: string; detail?: string }) => void): Promise<UnlistenFn> =>
+    listen<{ kind: string; detail?: string }>("worker-progress", (e) => cb(e.payload)),
   onModelProgress: (cb: (p: ModelProgress) => void): Promise<UnlistenFn> =>
     listen<ModelProgress>("model-progress", (e) => cb(e.payload)),
   onEngineStatus: (cb: (p: EngineStatus) => void): Promise<UnlistenFn> =>

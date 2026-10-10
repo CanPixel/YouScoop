@@ -26,6 +26,9 @@ out/
 # Tauri & Rust build artifacts
 /src-tauri/target/
 /src-tauri/gen/schemas/
+**/src-tauri/gen/schemas/
+**/target/
+**/__pycache__/
 
 # ES Lint / Prettier / Stylelint Cache
 .eslintcache

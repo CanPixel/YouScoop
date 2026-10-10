@@ -1,0 +1,457 @@
+{
+ "frames": "20 keyframes of the 32:45 test source (indices 0,1,3,5,6,7,9,10,14,15,16,19,21,24,34,35,36,38,41,58)",
+ "reference": "Close-ups: man in a black cap with a white Y, black jacket over a white shirt, black and red gaming chair, microphone on an arm, whiteboard and ornate silver cross behind. Wide shots: desk with laptop, cans, mixer, purple LED strip, studio light, wall art, door. No headphones.",
+ "scoring": "Invented or wrong details counted by hand against the frames",
+ "results": {
+  "smol": {
+   "frames": [
+    {
+     "description": "The person is wearing a black baseball cap with the letter \"Y\" on it, and they are sitting in front of a microphone. They appear to be speaking or recording something. The setting is indoors, with a wall behind them that has some drawings and a cross on it. There are also some papers pinned to the wall.",
+     "frame": "f_00001.jpg",
+     "seconds": 0.598460333
+    },
+    {
+     "description": "The video shows a person sitting in front of a computer, wearing headphones and speaking into the microphone. They are surrounded by various objects such as a laptop, a water bottle, and some cables on their desk. The setting appears to be an office or home workspace with a television in the background.",
+     "frame": "f_00006.jpg",
+     "seconds": 0.532936166
+    },
+    {
+     "description": "A person is sitting at a desk with various objects such as a laptop, headphones, and cans of soda. The setting appears to be an office or studio environment.",
+     "frame": "f_00015.jpg",
+     "seconds": 0.370102667
+    },
+    {
+     "description": "A person is wearing a black cap with the letter Y on it and speaking into a microphone. The background includes a wall with mathematical equations written on it, as well as a cross-shaped object hanging from the ceiling.",
+     "frame": "f_00024.jpg",
+     "seconds": 0.441174125
+    },
+    {
+     "description": "A person is sitting in a chair with a microphone, wearing a black cap and jacket. The background has a whiteboard and some decorations on the wall.",
+     "frame": "f_00029.jpg",
+     "seconds": 0.375364167
+    },
+    {
+     "description": "A person is sitting at a desk with various objects on it, including a laptop and a microphone. The setting appears to be an office or studio environment.",
+     "frame": "f_00034.jpg",
+     "seconds": 0.361065375
+    },
+    {
+     "description": "The video shows a person sitting at a desk with various objects such as laptops, headphones, and drinks. They are wearing a black cap and jacket while speaking into the microphone. The setting appears to be an office or studio with shelves in the background and a purple light on one side of the desk.",
+     "frame": "f_00043.jpg",
+     "seconds": 0.52323775
+    },
+    {
+     "description": "A person is sitting in a chair with a microphone, wearing a black cap and headphones. The background has a whiteboard and some decorations.",
+     "frame": "f_00048.jpg",
+     "seconds": 0.337468125
+    },
+    {
+     "description": "A person is sitting at a desk with various objects such as a laptop, headphones, and cans. The setting appears to be an office or studio environment.",
+     "frame": "f_00067.jpg",
+     "seconds": 0.3665535
+    },
+    {
+     "description": "The video frame shows a person sitting in front of a microphone, wearing a black jacket with red trim and holding what appears to be a lightsaber prop. They are surrounded by various objects on the table in front of them, including a cup, a can, and some other items that are not clearly identifiable. The setting is an indoor environment with walls decorated with pictures or artwork in the background.",
+     "frame": "f_00071.jpg",
+     "seconds": 0.642188417
+    },
+    {
+     "description": "A person is sitting in front of a microphone, wearing a black jacket with red accents and a white shirt. They are speaking into the microphone while looking at a computer screen displaying a document or web page. The background includes a wall with various items such as a cross and some drawings, suggesting an indoor setting possibly related to work or study.",
+     "frame": "f_00076.jpg",
+     "seconds": 0.586781166
+    },
+    {
+     "description": "A person is sitting in front of a microphone, wearing headphones and speaking into it. They are dressed in a black jacket with red accents and have a baseball cap on their head. The background includes a wall with a cross hanging on it, as well as some papers or documents pinned to the wall.",
+     "frame": "f_00090.jpg",
+     "seconds": 0.524782333
+    },
+    {
+     "description": "A person is sitting in a chair with a microphone and wearing a black hat. They are speaking into the microphone while looking at something off-camera, possibly writing or reading from a document that is not clearly visible in the image.",
+     "frame": "f_00100.jpg",
+     "seconds": 0.440421083
+    },
+    {
+     "description": "A person is sitting in a chair wearing a black cap with the letter Y on it. They are speaking into a microphone and there's a cross-shaped object behind them.",
+     "frame": "f_00114.jpg",
+     "seconds": 0.384874375
+    },
+    {
+     "description": "The video frame shows a person wearing a black jacket and a baseball cap, speaking into a microphone. They are sitting in front of a wall with various objects on it, including a poster depicting a group of people and a cross symbol. The person is likely discussing or reacting to the images displayed in front of them.",
+     "frame": "f_00161.jpg",
+     "seconds": 0.530419333
+    },
+    {
+     "description": "A person is sitting at a desk with various objects on it, including a laptop and some bottles. The setting appears to be an office or studio.",
+     "frame": "f_00165.jpg",
+     "seconds": 0.355393959
+    },
+    {
+     "description": "The video frame shows a person sitting in front of a microphone, wearing a black cap and headphones. They are gesturing with their hands while speaking into the microphone. The setting appears to be an indoor environment, possibly a home office or studio, as there is a laptop and other electronic devices visible in the background. Notable objects include a water bottle on the table, a black bag with white text, and some colorful lights hanging from the ceiling.",
+     "frame": "f_00170.jpg",
+     "seconds": 0.671059125
+    },
+    {
+     "description": "A person is sitting in a chair wearing a black cap with the letter Y on it. They are speaking into a microphone and there's a whiteboard behind them, as well as a crucifix hanging on the wall.",
+     "frame": "f_00179.jpg",
+     "seconds": 0.439015167
+    },
+    {
+     "description": "A person is wearing a black cap with the letter Y on it and speaking into a microphone. The background has a whiteboard, a Christmas tree decoration, and some papers.",
+     "frame": "f_00193.jpg",
+     "seconds": 0.377624375
+    },
+    {
+     "description": "In the video frame, a person is sitting in front of a computer with headphones on. The screen displays an image and text that reads \"GET THE FULL HOUR VIDEO ONLY ON PATREON.COM/IZZYGRiffin.\" The person is wearing a black shirt and has long hair, which suggests they might be the creator or host of the video.",
+     "frame": "f_00273.jpg",
+     "seconds": 0.606724292
+    }
+   ],
+   "loadSeconds": 0.592756042,
+   "model": "SmolVLM2-2.2B-Instruct-Q4_K_M.gguf",
+   "assessment": "About 11 wrong details: headphones in 8 frames, a lightsaber, a Christmas tree, a screen with a document"
+  },
+  "gemma": {
+   "frames": [
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is sitting behind a desk and wearing a black baseball cap, a white t-shirt, and a dark jacket. He\u2019s holding a microphone in front of him, and the setting appears to be an interior room with purple lighting and a gaming chair visible behind him.",
+     "frame": "f_00001.jpg",
+     "seconds": 3.089475708
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible wearing a black cap and a dark jacket, sitting in front of a gaming chair. He's operating a laptop with several microphones and lights surrounding him, set up within what appears to be a home studio or streaming setup.",
+     "frame": "f_00006.jpg",
+     "seconds": 2.156351292
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible wearing a black jacket and a white cap with a Y logo. He sits at a table covered in equipment, including a laptop and microphones, while the setting appears to be an indoor studio space illuminated by purple lighting and featuring several framed pictures.",
+     "frame": "f_00015.jpg",
+     "seconds": 2.295853458
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible, wearing a black hat with a white \u201cY\u201d logo and a dark blazer. He sits in a gaming chair facing the camera, holding a microphone, while behind him is a decorative crystal cross. A white board with text and numbers is partially visible in the background.",
+     "frame": "f_00024.jpg",
+     "seconds": 2.316644959
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA young man is visible, wearing a black hat with a white \u201cY\u201d logo and a dark jacket. He\u2019s sitting in front of a gaming chair and holding a microphone, while behind him is a whiteboard with some text and diagrams, as well as a decorative object resembling a crystal cross.",
+     "frame": "f_00029.jpg",
+     "seconds": 2.193715292
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is seated at a white table, wearing a black hoodie and dark pants. He appears to be speaking into a microphone while looking at a laptop screen. The setting includes various objects like a television, framed artwork, and lighting equipment, all within what seems to be a darkened room.",
+     "frame": "f_00034.jpg",
+     "seconds": 2.090144292
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible wearing a black hat and a dark-colored jacket, sitting at a table with various electronic equipment including a laptop, mixer, and microphones. The setting appears to be a small room illuminated by purple lighting and featuring several framed images on the walls, as well as recording equipment set up around the table.",
+     "frame": "f_00043.jpg",
+     "seconds": 2.2361050000000002
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA young man is visible, wearing a black hat with a white \u201cY\u201d logo and a matching jacket. He\u2019s sitting in front of a gaming chair, positioned behind a whiteboard displaying mathematical equations and numbers.",
+     "frame": "f_00048.jpg",
+     "seconds": 1.951364292
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible, wearing a dark hooded sweatshirt and a white baseball cap. He sits at a table with a laptop, mixer, and several cans, while the setting includes a purple LED strip and a dark doorway.",
+     "frame": "f_00067.jpg",
+     "seconds": 1.87667025
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible, wearing a black cap and a grey hoodie with an Adidas logo. He sits at a desk with a laptop open, a microphone in front of him, and has a drink beside him. The setting appears to be a home studio with a gaming chair and notable objects include a pink LED light strip and a crucifix on the wall.",
+     "frame": "f_00071.jpg",
+     "seconds": 2.339888292
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible wearing a dark-colored cap and a white shirt underneath a black jacket. He sits in a gaming chair, holding a microphone, and appears to be speaking or recording. The setting is an interior room with a white wall displaying written text and a silver crucifix mounted on the wall behind him.",
+     "frame": "f_00076.jpg",
+     "seconds": 2.3003725
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible wearing a black jacket, white shirt and a dark-colored hat with a Y logo. He\u2019s sitting in a gaming chair facing a camera, and the setting appears to be an interior space with a white wall behind him and a crucifix visible on the right.",
+     "frame": "f_00090.jpg",
+     "seconds": 2.31779575
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA young man is seated in front of a gaming chair, wearing a black jacket and a white hat with a large \u201cY\u201d symbol. He\u2019s holding a microphone and smiling at the camera while looking to his right, where a crucifix is visible behind him.",
+     "frame": "f_00100.jpg",
+     "seconds": 2.390420333
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA young man is visible, wearing a black cap with a white \u201cY\u201d logo and a dark jacket. He\u2019s positioned in front of a gaming chair and speaking into a black microphone, while a whiteboard is visible behind him with some text on it. A large, ornate weapon is also shown in the background.",
+     "frame": "f_00114.jpg",
+     "seconds": 2.324971
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible wearing a black hooded sweatshirt and a dark-colored cap with a cross emblem. He is positioned in front of a gaming chair, holding a microphone, and has a crucifix displayed on the wall behind him.",
+     "frame": "f_00161.jpg",
+     "seconds": 2.049487208
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible, wearing a black jacket and a hat with headphones. He sits at a white table with a laptop in front of him, and he\u2019s speaking into a microphone. The setting is an interior room with a dark doorframe and notable objects include a framed poster and several crucifixes.",
+     "frame": "f_00165.jpg",
+     "seconds": 2.204116041
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible sitting in a gaming chair, wearing a black baseball cap and a dark jacket. He's gesturing with his hands while speaking into a microphone, set up on a table alongside a glowing drink container and various objects in a dimly lit room.",
+     "frame": "f_00170.jpg",
+     "seconds": 2.162749834
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA man is visible, sitting in an ergonomic gaming chair. He is wearing a black baseball cap and a dark blazer. Behind him is a whiteboard with text and numbers on it, as well as a decorative crucifix.",
+     "frame": "f_00179.jpg",
+     "seconds": 2.111492917
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA person is visible wearing a dark-colored cap with a white \u201cY\u201d logo, and a black gaming chair. They are holding a glowing staff or wand, and the frame shows a whiteboard behind them displaying mathematical equations.",
+     "frame": "f_00193.jpg",
+     "seconds": 2.041249292
+    },
+    {
+     "description": "Here\u2019s a description of the video frame:\n\nA person is visible wearing a dark cap and a patterned shirt, sitting in front of a red gaming chair. Behind them is a desk with a computer screen displaying text and graphics, along with various objects like a water bottle and a small decorative item.",
+     "frame": "f_00273.jpg",
+     "seconds": 2.040113375
+    }
+   ],
+   "loadSeconds": 1.136056167,
+   "model": "gemma-3-4b-it-Q4_K_M.gguf",
+   "assessment": "About 9: a white cap in 3 frames, an Adidas hoodie, a cross emblem cap, headphones, a glowing staff or wand, a patterned shirt, a television"
+  },
+  "qwen": {
+   "frames": [
+    {
+     "description": "The video frame shows a person sitting in front of a microphone, wearing a black jacket with red accents and a black cap. The background includes a framed document or poster on the wall to the left and a crucifix hanging above, suggesting an indoor setting possibly in a home office or studio. The person appears to be engaged in some form of recording or broadcasting activity.",
+     "frame": "f_00001.jpg",
+     "seconds": 2.206852167
+    },
+    {
+     "description": "A person is sitting in a gaming chair, facing the camera. They are wearing a black cap and a dark jacket over a white shirt. In front of them on the desk is a microphone with a pop filter, a laptop, a water bottle, and some other small items. The room has shelves in the background filled with various objects, including what appears to be books or boxes. There is also a neon light on the left side of the frame and some posters on the wall",
+     "frame": "f_00006.jpg",
+     "seconds": 2.3473184160000002
+    },
+    {
+     "description": "A person is sitting at a desk in what appears to be an office or home studio. They are wearing a black jacket and have long hair tied back with a headband. In front of them is a laptop, various cans on the desk, and some electronic equipment including a mixer or audio interface. The room has purple lighting in the background, with a door visible behind them. There is also a crucifix hanging on the wall and some framed pictures or posters.",
+     "frame": "f_00015.jpg",
+     "seconds": 2.333853583
+    },
+    {
+     "description": "The video frame shows a person sitting in front of a microphone, wearing a black cap with the letter \"Y\" on it. The individual is seated in an office or study environment, as indicated by the whiteboard and various items hanging from a hook behind them. There are no visible texts on any document or web page in this frame.",
+     "frame": "f_00024.jpg",
+     "seconds": 2.105614667
+    },
+    {
+     "description": "The video frame shows a person sitting in front of a microphone, wearing a black hoodie and a black cap with the letter \"Y\" on it. The background includes a whiteboard with some writing and a decorative item hanging from the ceiling, possibly a cross or similar ornament.",
+     "frame": "f_00029.jpg",
+     "seconds": 2.003785875
+    },
+    {
+     "description": "A person is sitting at a desk in what appears to be an office or home studio. They are wearing a black jacket and have their hands resting on the laptop, which has a microphone attached with red cables coming out of it. The desk is cluttered with various items including cans of energy drinks and a plastic cup filled with liquid, possibly soda or coffee. There are also electronic equipment like an audio mixer on the left side of the desk. The room has purple lighting and a",
+     "frame": "f_00034.jpg",
+     "seconds": 2.380850208
+    },
+    {
+     "description": "The video frame shows a person sitting at a desk in what appears to be an office or home studio. The individual is wearing a black hoodie and a baseball cap, with their head resting on one hand. In front of them are various electronic equipment including a laptop, a mixing console, and several cans of soda. The room has purple lighting in the background with some framed pictures on the wall. There is also a door visible behind them.",
+     "frame": "f_00043.jpg",
+     "seconds": 2.35160325
+    },
+    {
+     "description": "The video frame shows a person sitting in front of a microphone, wearing a black hoodie with red accents and a black cap that has the letter \"Y\" on it. The background includes a whiteboard with some writing and a decorative item hanging from the ceiling, possibly a Christmas ornament or similar decoration.",
+     "frame": "f_00048.jpg",
+     "seconds": 2.098291458
+    },
+    {
+     "description": "A man is sitting at a desk in what appears to be an office or home studio. He is wearing a black t-shirt and a baseball cap, and he has his hand on the laptop's keyboard as if typing. The desk holds various items including a can of Red Bull energy drink, some cables connected to electronic devices, and other miscellaneous objects. Behind him is a door with a small cross hanging on it, along with framed pictures or artwork on the wall. The room has",
+     "frame": "f_00067.jpg",
+     "seconds": 2.45782975
+    },
+    {
+     "description": "A person is sitting in a gaming chair, wearing a black jacket and a cap. They are holding a microphone with an arm attached to it, suggesting they might be recording or streaming content. In front of them is a laptop on a desk, and there are various items around the workspace, including what appears to be a can of soda and some other small objects. The background shows part of an interior space with shelves containing various items.",
+     "frame": "f_00071.jpg",
+     "seconds": 2.375477167
+    },
+    {
+     "description": "The video frame shows a person sitting in front of a microphone, wearing a black jacket with red accents and a black cap. The background includes a whiteboard with some writing on it and a crucifix hanging from the ceiling.",
+     "frame": "f_00076.jpg",
+     "seconds": 1.99437875
+    },
+    {
+     "description": "The video frame shows a person sitting in front of a microphone, wearing a black jacket with red accents and a black cap. The background includes a whiteboard with some writing on it and a crucifix hanging from the ceiling.",
+     "frame": "f_00090.jpg",
+     "seconds": 1.984784875
+    },
+    {
+     "description": "The video frame shows a person sitting in front of a microphone, wearing a black cap with the letter \"Y\" on it. The individual is gesturing with their right hand while speaking into the microphone. Behind them, there is a whiteboard displaying some handwritten notes and equations. To the left of the person's head, there are two silver crucifixes hanging on the wall. The setting appears to be a room with a casual and personal atmosphere.",
+     "frame": "f_00100.jpg",
+     "seconds": 2.406822625
+    },
+    {
+     "description": "The video frame shows a person wearing a black cap with the letter \"Y\" on it, sitting in front of a microphone. The individual is dressed in a dark jacket and appears to be engaged in an activity that involves speaking into the microphone. In the background, there are some objects on a shelf or wall, including what looks like a decorative item with intricate designs and possibly a document or board with writing. The setting suggests an indoor environment, likely intended for recording audio content such",
+     "frame": "f_00114.jpg",
+     "seconds": 2.454357917
+    },
+    {
+     "description": "The video frame shows a person wearing a black jacket with red accents and a black cap. They are standing in front of a microphone, gesturing as if speaking or presenting something. The background includes a poster depicting Hindu depictions of the nephilim and some text on it. There is also a crucifix hanging from what appears to be a ceiling or wall fixture in the background, along with other indistinct objects and possibly some furniture. The setting seems to be indoors",
+     "frame": "f_00161.jpg",
+     "seconds": 2.460889625
+    },
+    {
+     "description": "A person is sitting at a desk in what appears to be an office or home studio. They are wearing a dark hoodie and have their hands on the microphone, suggesting they might be recording audio for a podcast or live stream. The desk has various items including a laptop, a can of Red Bull energy drink, and some other small objects. Behind the person is a door with a cross hanging on it, and there are posters or artwork on the walls behind them. The room has",
+     "frame": "f_00165.jpg",
+     "seconds": 2.47737525
+    },
+    {
+     "description": "A person is sitting in a gaming chair, speaking into a microphone. They are wearing a black cap and a white shirt with red accents on the sleeves. The room has colorful lighting, including a neon light strip in the background. There is a cup of coffee or tea and some other items on the desk next to them. The setting appears to be a home office or gaming setup with various personal items visible in the background.",
+     "frame": "f_00170.jpg",
+     "seconds": 2.437013667
+    },
+    {
+     "description": "The video frame shows a person wearing a black hoodie with red accents and a black cap with the letter \"Y\" on it. The individual is seated in front of a microphone, suggesting they are recording or streaming content. Behind them, there is a whiteboard with some writing and diagrams on it, as well as a decorative item hanging from the ceiling that appears to be a cross. The setting seems to be an indoor room or studio designed for recording purposes.",
+     "frame": "f_00179.jpg",
+     "seconds": 2.463174667
+    },
+    {
+     "description": "The video frame shows a person wearing a black hoodie with red accents and a baseball cap. They are holding up their hand, possibly gesturing or pointing towards the camera. In front of them is a microphone on a stand. The background includes a whiteboard with some writing and diagrams, as well as a decorative item hanging from the ceiling. Text overlay in bold yellow letters reads \"AVAILABLE ON PATREON.\"",
+     "frame": "f_00193.jpg",
+     "seconds": 2.367070583
+    },
+    {
+     "description": "The image shows a person sitting at a desk with various items around them, including headphones and what appears to be gaming equipment. The background includes some text that reads \"GET THE FULL 1.5 HOUR VIDEO ONLY ON PATREON.COM/IZZYNGRIFFIN.\" There is also a document or webpage visible in the background, but its content cannot be discerned. The person seems to be engaged with something on their computer screen.",
+     "frame": "f_00273.jpg",
+     "seconds": 2.401118125
+    }
+   ],
+   "loadSeconds": 0.325530458,
+   "model": "Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf",
+   "assessment": "About 3: a headband, standing instead of sitting, headphones once; also attributes the chair's red trim to the jacket. Needs the image encoder on the CPU (Metal produced NaN output)"
+  },
+  "omni": {
+   "model": "Qwen2.5-Omni-3B Thinker (fp16, MPS)",
+   "loadSeconds": 17.09152004099451,
+   "peakMemoryGb": 9.749331968,
+   "frames": [
+    {
+     "frame": "f_00001.jpg",
+     "seconds": 5.0833034589886665,
+     "inputTokens": 294,
+     "description": "The video shows a person sitting in a gaming chair with red and black accents. They are wearing a black jacket and a black cap with a white \"Y\" on it. The person is speaking into a microphone. In the background, there is a framed piece of art on the wall and a decorative item on a stand."
+    },
+    {
+     "frame": "f_00006.jpg",
+     "seconds": 3.1738044579979032,
+     "inputTokens": 294,
+     "description": "The video shows a person sitting in a gaming chair, wearing a black cap and a dark jacket over a white shirt. They are speaking into a microphone, with a laptop and a drink container on the desk in front of them. The background includes shelves with various items and a framed picture on the wall."
+    },
+    {
+     "frame": "f_00015.jpg",
+     "seconds": 4.255225749919191,
+     "inputTokens": 294,
+     "description": "The video shows a person sitting at a desk in a room with a microphone, laptop, and various items on the desk. The person is wearing a black jacket and a black cap with a white \"Y\" on it. The room has a purple neon light, framed artwork on the wall, and a door in the background. There are several cans and a container on the desk. The person appears to be engaged in some activity, possibly recording or streaming."
+    },
+    {
+     "frame": "f_00024.jpg",
+     "seconds": 3.178299166029319,
+     "inputTokens": 294,
+     "description": "The video features a person wearing a black cap with a white \"Y\" on it and a black jacket with red trim. The individual is speaking into a microphone. The background includes a whiteboard with some writing on it and a decorative object resembling a cross with a crystal-like element. The setting appears to be indoors, possibly in a studio or a room designed for recording or broadcasting."
+    },
+    {
+     "frame": "f_00029.jpg",
+     "seconds": 3.9064791249111295,
+     "inputTokens": 294,
+     "description": "The video features a person wearing a black cap with a white \"Y\" on it and a black jacket with red accents. The individual is seated in front of a microphone, suggesting they might be recording a podcast or a live stream. In the background, there is a whiteboard with some writing on it, and a decorative crucifix is visible on the wall. The setting appears to be indoors, possibly in a home or studio environment."
+    },
+    {
+     "frame": "f_00034.jpg",
+     "seconds": 3.926152041880414,
+     "inputTokens": 294,
+     "description": "The video shows a person sitting at a desk in a room with a purple wall. The person is wearing a black hoodie and a black cap with a white logo. They are sitting in front of a laptop and a mixing console, with a microphone in front of them. The desk has various items on it, including a can of soda, a cup, and some electronic equipment. The room has a door in the background and several framed pictures on the wall."
+    },
+    {
+     "frame": "f_00043.jpg",
+     "seconds": 3.762649458134547,
+     "inputTokens": 294,
+     "description": "The video shows a person sitting at a desk in a room with various electronic equipment and decorations. The person is wearing a black jacket and a cap with a \"V\" on it. They are speaking into a microphone and looking at a laptop screen. The room has a purple neon light, framed artwork on the walls, and a door in the background. There are several cans and a cup on the desk."
+    },
+    {
+     "frame": "f_00048.jpg",
+     "seconds": 3.4546217501629144,
+     "inputTokens": 294,
+     "description": "The video features a person wearing a black cap with a white \"Y\" on it and a black jacket with red trim. The individual is seated in front of a microphone, suggesting they are recording or broadcasting. In the background, there is a whiteboard with some writing on it, and a crucifix is visible on the wall. The setting appears to be indoors, possibly in a home office or studio."
+    },
+    {
+     "frame": "f_00067.jpg",
+     "seconds": 3.415228792000562,
+     "inputTokens": 294,
+     "description": "The video shows a person sitting at a desk in a dimly lit room. The individual is wearing a black t-shirt and a baseball cap. They are engaged in an activity involving a laptop, with various electronic equipment and a can of soda on the desk. The room has a purple neon light on the left side, and there are framed pictures and a cross on the wall behind the person."
+    },
+    {
+     "frame": "f_00071.jpg",
+     "seconds": 3.425619959132746,
+     "inputTokens": 294,
+     "description": "The video shows a person sitting at a desk in a room. The individual is wearing a black cap and a dark jacket. They are speaking into a microphone, which is connected to a laptop on the desk. The desk has various items, including a can of soda, a cup, and some papers. The background includes a wall with a cross and some framed pictures."
+    },
+    {
+     "frame": "f_00076.jpg",
+     "seconds": 3.52159500005655,
+     "inputTokens": 294,
+     "description": "The video shows a person wearing a black jacket and a cap with a large \"Y\" on it. The person is sitting in front of a microphone, suggesting they might be recording a podcast or a live stream. The background includes a framed picture on the wall and a crucifix hanging on the wall. The setting appears to be indoors, possibly in a home studio or a personal space."
+    },
+    {
+     "frame": "f_00090.jpg",
+     "seconds": 3.5115726250223815,
+     "inputTokens": 294,
+     "description": "The video shows a person wearing a black jacket with red accents and a black cap with a white \"Y\" on it. The person is sitting in front of a microphone, suggesting they might be recording a podcast or a radio show. The background includes a framed drawing or artwork on the wall and a crucifix on a stand. The setting appears to be indoors, possibly in a home studio or a personal space."
+    },
+    {
+     "frame": "f_00100.jpg",
+     "seconds": 3.503675833111629,
+     "inputTokens": 294,
+     "description": "The video features a person wearing a black cap with a white \"Y\" on it, a black jacket with red trim, and a white shirt underneath. The person is seated in front of a microphone, suggesting they might be recording a podcast or a live stream. The background includes a whiteboard with some writing on it and a crucifix hanging on the wall. The person appears to be speaking or singing into the microphone."
+    },
+    {
+     "frame": "f_00114.jpg",
+     "seconds": 3.4651873339898884,
+     "inputTokens": 294,
+     "description": "The video shows a person wearing a black cap with a white \"Y\" on it and a black jacket with red trim. The person is sitting in front of a microphone, suggesting they might be recording a podcast or a video. In the background, there is a whiteboard with some writing on it, and a decorative crucifix hanging on the wall. The setting appears to be indoors, possibly in a home office or studio."
+    },
+    {
+     "frame": "f_00161.jpg",
+     "seconds": 3.739274833118543,
+     "inputTokens": 294,
+     "description": "The video features a person wearing a black cap with a white \"Y\" on it, a black jacket, and a white shirt. They are holding a microphone with red accents and appear to be speaking or presenting. In the background, there is a poster depicting a Hindu depiction of the nephilim, which shows a large baby surrounded by smaller figures. The setting appears to be indoors, with a door and some framed pictures visible. The text overlay at the bottom of the screen"
+    },
+    {
+     "frame": "f_00165.jpg",
+     "seconds": 3.652098582824692,
+     "inputTokens": 294,
+     "description": "The video shows a person sitting at a desk in a room with various electronic equipment and decorations. The person is wearing a black jacket and a cap with a \"V\" on it. They are speaking into a microphone and gesturing with their hands. The room has a modern aesthetic with a purple neon light, framed artwork on the walls, and a door in the background. There is a laptop, a mixer, and other electronic devices on the desk."
+    },
+    {
+     "frame": "f_00170.jpg",
+     "seconds": 3.5504955837968737,
+     "inputTokens": 294,
+     "description": "The video shows a person sitting in a gaming chair, wearing a black cap and a dark jacket over a white shirt. They are speaking into a microphone, gesturing with their hands, and appear to be engaged in a conversation or recording a podcast. The setting includes a desk with various items, including a water bottle, a cup, and some electronic equipment. The background features a wall with a framed picture and a decorative item."
+    },
+    {
+     "frame": "f_00179.jpg",
+     "seconds": 3.086438999976963,
+     "inputTokens": 294,
+     "description": "The video frame shows a person wearing a black and red jacket and a black cap with a white \"Y\" on it. The person is speaking into a microphone. In the background, there is a whiteboard with some writing on it and a decorative cross hanging on the wall. The setting appears to be indoors, possibly in a studio or a room with a casual setup."
+    },
+    {
+     "frame": "f_00193.jpg",
+     "seconds": 3.5996572910808027,
+     "inputTokens": 294,
+     "description": "The video frame shows a person wearing a black hoodie with red accents and a black cap with a white \"Y\" on it. The person is speaking into a microphone. The background includes a whiteboard with some writing on it and a decorative object that appears to be a crystal or crystal-like item. The text \"AVAILABLE ON PATREON\" is prominently displayed in yellow letters across the person's face."
+    },
+    {
+     "frame": "f_00273.jpg",
+     "seconds": 3.4062197080347687,
+     "inputTokens": 294,
+     "description": "The video frame shows a person sitting at a desk with a computer setup, including a monitor, keyboard, and a can of soda. The person is wearing a black shirt and a cap. The background includes a kitchen area with people standing and conversing. There is a text overlay in the top left corner promoting a full 1.5-hour video available on Patreon.com/IzzyGriffin."
+    }
+   ],
+   "assessment": "About 4 wrong details: a V instead of Y on the cap in 2 frames, an invented kitchen with people talking, a purple wall instead of purple light. Slightly more specific than Qwen2.5-VL (names the white Y in 12 frames against 6, and once correctly puts the red trim on the chair). Loaded through the desktop runtime as runtime/worker.py does (fp16 on MPS): 17 s load, 3.6 s per frame, 9.7 GB peak. Script: experiments/model-trial/omni_frames.py"
+  }
+ },
+ "conclusion": "Qwen2.5-VL 3B and Omni 3B are about equally accurate on frames; Qwen2.5-VL is 1.6 times faster, needs about a third of the memory, and runs in the built-in engine without the optional desktop runtime. Omni stays reserved for joint audio and video inspection."
+}

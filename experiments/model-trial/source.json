@@ -1,0 +1,9 @@
+{
+  "video_id": "kVReoK-UBJA",
+  "clip_start_seconds": 390,
+  "clip_end_seconds": 400,
+  "source_sha256": {
+    "cues.json": "5b2d3cdabfe4aa65166fcf1f602ecf1017d722458971d02e2c1ca557c8aa493e",
+    "video.mp4": "ff772b8ad33c9bcb743ae567b3d6a2b33240c5a13509428985eefc75a9dadfa3"
+  }
+}

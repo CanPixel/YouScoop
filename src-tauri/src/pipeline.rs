@@ -7,17 +7,20 @@
 //! artifact already exists, so a retry resumes where the last attempt
 //! stopped instead of re-downloading and re-transcribing everything.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use serde::Serialize;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::media;
 use crate::models;
+use crate::onscreen;
+use crate::spelling;
+use crate::voices;
 use crate::rag;
 use crate::state::AppState;
 use crate::store::{self, Chunk, FrameRef, VideoMeta};
@@ -90,7 +93,7 @@ fn persist(app: &AppHandle, meta: &VideoMeta) -> Result<()> {
 }
 
 // Longer videos take ages to download, describe, and index locally.
-const MAX_DURATION_SECS: f64 = 90.0 * 60.0;
+const MAX_DURATION_SECS: f64 = 120.0 * 60.0;
 
 /// Video file extensions accepted for local ingestion.
 pub const LOCAL_VIDEO_EXTS: [&str; 6] = ["mp4", "mov", "m4v", "webm", "mkv", "avi"];
@@ -114,7 +117,7 @@ pub async fn ingest(app: AppHandle, state: Arc<AppState>, url: String) {
         emit_global_error(
             &app,
             format!(
-                "\"{}\" is {} long — YouScoop caps videos at 1:30:00 to keep local processing reasonable.",
+                "\"{}\" is {} long. YouScoop accepts videos up to 2:00:00.",
                 info.title,
                 rag::format_ts(info.duration_secs),
             ),
@@ -175,7 +178,7 @@ pub async fn ingest_local(app: AppHandle, state: Arc<AppState>, path: PathBuf) {
         emit_global_error(
             &app,
             format!(
-                "\"{}\" is {} long — YouScoop caps videos at 1:30:00 to keep local processing reasonable.",
+                "\"{}\" is {} long. YouScoop accepts videos up to 2:00:00.",
                 file_name,
                 rag::format_ts(duration),
             ),
@@ -402,18 +405,7 @@ async fn run_stages(
         }
         None => {
             emit_stage(app, &id, "frames", 0.0, "Detecting scene changes…");
-            let frames = media::extract_frames(&video_path, &frames_dir, meta.duration_secs).await?;
-            if frames.is_empty() {
-                return Err(anyhow!("no frames could be extracted from the video"));
-            }
-            let manifest: Vec<FrameRef> = frames
-                .iter()
-                .map(|(ts, p)| FrameRef {
-                    ts: *ts,
-                    file: p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
-                })
-                .collect();
-            store::save_frame_manifest(app, &id, &manifest)?;
+            let frames = extract_keyframes(app, &id, &video_path, &frames_dir, meta.duration_secs).await?;
             emit_stage(app, &id, "frames", 1.0, format!("{} keyframes extracted", frames.len()));
             frames
         }
@@ -468,7 +460,7 @@ async fn run_stages(
         }
     }
 
-    Ok(())
+    enrich(app, state, meta, cancel).await
 }
 
 /// Captions when the video has a URL and provides them, Whisper otherwise.
@@ -592,6 +584,23 @@ async fn obtain_cues(
 
 /// Restore the frame list from the manifest, or None when it's missing or
 /// any file has gone away (then the caller re-extracts).
+/// Extract keyframes at scene changes and save their manifest.
+async fn extract_keyframes(app: &AppHandle, id: &str, video: &std::path::Path, frames_dir: &std::path::Path, duration_secs: f64) -> Result<Vec<(f64, PathBuf)>> {
+    let frames = media::extract_frames(video, frames_dir, duration_secs).await?;
+    if frames.is_empty() {
+        return Err(anyhow!("no frames could be extracted from the video"));
+    }
+    let manifest: Vec<FrameRef> = frames
+        .iter()
+        .map(|(ts, p)| FrameRef {
+            ts: *ts,
+            file: p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+        })
+        .collect();
+    store::save_frame_manifest(app, id, &manifest)?;
+    Ok(frames)
+}
+
 fn load_frames(app: &AppHandle, id: &str, frames_dir: &std::path::Path) -> Option<Vec<(f64, PathBuf)>> {
     let manifest = store::load_frame_manifest(app, id).ok()?;
     if manifest.is_empty() {
@@ -639,12 +648,37 @@ async fn describe_frames(
         return Ok(existing);
     }
 
+    // Prefer Qwen2.5-VL, downloading it on first use; SmolVLM2 remains the
+    // fallback when it cannot be fetched.
+    let mut frame_model = (models::spec("vlm").unwrap(), models::spec("mmproj").unwrap());
+    let preferred = (models::spec("scene-vlm").unwrap(), models::spec("scene-mmproj").unwrap());
+    let mut available = models::is_downloaded(app, preferred.0) && models::is_downloaded(app, preferred.1);
+    if !available {
+        emit_stage(app, &id, "describe", 0.0, format!("Downloading {} for frame descriptions…", preferred.0.label));
+        available = async {
+            models::download(app, preferred.0.id).await?;
+            models::download(app, preferred.1.id).await
+        }
+        .await
+        .is_ok();
+        check_cancel(cancel).map_err(|_| anyhow!("cancelled"))?;
+    }
+    if available {
+        frame_model = preferred;
+    }
+    let label = {
+        let mut guard = engine.lock().unwrap();
+        let engine = guard.as_mut().ok_or_else(|| anyhow!("engine not loaded"))?;
+        engine.use_frame_model(&models::model_path(app, frame_model.0)?.to_string_lossy(), &models::model_path(app, frame_model.1)?.to_string_lossy());
+        engine.frame_model_label()
+    };
+    let version = if available { SCENE_PROMPT_VERSION.to_string() } else { "2".to_string() };
     emit_stage(
         app,
         &id,
         "describe",
         done.len() as f32 / n_frames as f32,
-        format!("Watching {} frames with SmolVLM2…", todo.len()),
+        format!("Watching {} frames with {label}…", todo.len()),
     );
 
     let app2 = app.clone();
@@ -688,6 +722,9 @@ async fn describe_frames(
             // Persist incrementally so a cancel/crash keeps completed VLM work.
             if store::meta_exists(&app2, &id2) {
                 let _ = store::save_descriptions(&app2, &id2, &out);
+                if let Ok(dir) = store::video_dir_path(&app2, &id2) {
+                    let _ = std::fs::write(dir.join("descriptions.version"), format!("{version}\n{label}"));
+                }
             }
         }
         Ok::<_, anyhow::Error>(out)
@@ -696,6 +733,305 @@ async fn describe_frames(
 
     chunks.sort_by(|a, b| a.start.partial_cmp(&b.start).unwrap_or(std::cmp::Ordering::Equal));
     Ok(chunks)
+}
+
+/// Embed chunk texts in batches, locking the engine per batch so chat stays
+/// responsive.
+async fn embed_chunks(
+    app: &AppHandle,
+    state: &Arc<AppState>,
+    id: &str,
+    cancel: &Arc<AtomicBool>,
+    chunks: &mut [Chunk],
+    stage: &'static str,
+    detail: &'static str,
+) -> Result<()> {
+    let engine = state.require_engine()?;
+    const BATCH: usize = 32;
+    let texts: Vec<String> = chunks.iter().map(|c| c.text.clone()).collect();
+    let n_texts = texts.len();
+    let app2 = app.clone();
+    let id2 = id.to_string();
+    let cancel2 = cancel.clone();
+    let vectors: Vec<Vec<f32>> = tauri::async_runtime::spawn_blocking(move || {
+        let mut vectors = Vec::with_capacity(n_texts);
+        for batch in texts.chunks(BATCH) {
+            check_cancel(&cancel2).map_err(|_| anyhow!("cancelled"))?;
+            let guard = engine.lock().unwrap();
+            let engine = guard.as_ref().ok_or_else(|| anyhow!("engine not loaded"))?;
+            vectors.extend(engine.embed_texts(batch, false)?);
+            drop(guard);
+            emit_stage(&app2, &id2, stage, (vectors.len() as f32 / n_texts as f32).min(0.95), detail);
+        }
+        Ok::<_, anyhow::Error>(vectors)
+    })
+    .await??;
+    for (chunk, vec) in chunks.iter_mut().zip(vectors) {
+        chunk.vector = vec;
+    }
+    Ok(())
+}
+
+/// Analyses added after the original pipeline. A ready video missing any of
+/// them can be updated in place with [`enrich`].
+/// A version suffix re-runs an analysis whose method improved.
+pub const ANALYSES: [&str; 4] = ["voices", "onscreen:3", "scenes:4", "spellings"];
+/// Frame descriptions written with the prompt that leaves on-screen text to OCR.
+/// Version 3: Qwen2.5-VL with the instruction that asks for people, clothing,
+/// setting and objects and leaves wording to OCR.
+/// Version 4: keyframes spread across time (no bursts) and descriptions that
+/// end on a whole sentence. Older descriptions also get new keyframes.
+const SCENE_PROMPT_VERSION: &str = "4";
+fn scene_descriptions_current(dir: &std::path::Path) -> bool {
+    std::fs::read_to_string(dir.join("descriptions.version")).is_ok_and(|v| v.lines().next().map(str::trim) == Some(SCENE_PROMPT_VERSION))
+}
+pub fn needs_enrichment(meta: &VideoMeta) -> bool {
+    ANALYSES.iter().any(|a| !meta.analysis.iter().any(|done| done == a))
+}
+
+/// Replace one source kind in the saved index. Reads the index fresh so a
+/// reviewed observation written during a long analysis is not lost.
+fn merge_index(app: &AppHandle, meta: &mut VideoMeta, sources: &[&str], replacement: Vec<Chunk>) -> Result<()> {
+    if !store::meta_exists(app, &meta.id) {
+        return Err(anyhow!("cancelled"));
+    }
+    let mut index = store::load_index(app, &meta.id)?;
+    index.retain(|c| !sources.contains(&c.source.as_str()));
+    index.extend(replacement);
+    index.sort_by(|a, b| a.start.total_cmp(&b.start));
+    store::save_index(app, &meta.id, &index)?;
+    meta.chunk_count = index.len();
+    Ok(())
+}
+
+/// Voice separation and on-screen text for a video whose transcript, frames
+/// and index exist. Each analysis is recorded in `meta.analysis` when it
+/// completes; a failure leaves the video usable and the analysis missing, so
+/// it can be retried. Returns an error only when cancelled.
+pub async fn enrich(app: &AppHandle, state: &Arc<AppState>, meta: &mut VideoMeta, cancel: &Arc<AtomicBool>) -> Result<()> {
+    let id = meta.id.clone();
+    let dir = store::video_dir(app, &id)?;
+    let video = meta.video_path.clone().map(PathBuf::from).filter(|p| p.is_file())
+        .ok_or_else(|| anyhow!("The original video file is missing"))?;
+    let cancelled = |e: &anyhow::Error| cancel.load(Ordering::Relaxed) || e.to_string() == "cancelled";
+
+    if !meta.analysis.iter().any(|a| a == "voices") {
+        let result = async {
+            let cues = store::load_cues(app, &id)?;
+            let mut paths = Vec::new();
+            for model in ["segmentation", "voiceprint"] {
+                let spec = models::spec(model).unwrap();
+                if !models::is_downloaded(app, spec) {
+                    emit_stage(app, &id, "voices", 0.0, format!("Downloading {}…", spec.label));
+                    models::download(app, model).await?;
+                }
+                paths.push(models::model_path(app, spec)?);
+            }
+            emit_stage(app, &id, "voices", 0.0, "Separating voices…");
+            let record = voices::diarize(&paths[0], &paths[1], &video, &dir, cancel, |p| {
+                emit_stage(app, &id, "voices", p * 0.9, "Separating voices…");
+            })
+            .await?;
+            let assigned = voices::assign(&cues, &record.turns);
+            let mut speech = vtt::chunk_cues_by_voice(&cues, &assigned, 40.0, 600);
+            embed_chunks(app, state, &id, cancel, &mut speech, "voices", "Indexing speech by voice…").await?;
+            merge_index(app, meta, &["speech"], speech)?;
+            let found = record.voices.iter().map(|v| format!("{} {}", v.voice, rag::format_ts(v.seconds))).collect::<Vec<_>>().join(", ");
+            Ok::<_, anyhow::Error>(found)
+        }
+        .await;
+        match result {
+            Ok(found) => {
+                meta.analysis.push("voices".into());
+                persist(app, meta)?;
+                emit_stage(app, &id, "voices", 1.0, format!("Voices separated: {found}"));
+            }
+            Err(e) if cancelled(&e) => return Err(anyhow!("cancelled")),
+            Err(e) => emit_stage(app, &id, "voices", 0.0, format!("Voice separation unavailable: {e}")),
+        }
+    }
+
+    if !meta.analysis.iter().any(|a| a == "onscreen:3") {
+        let result = async {
+            let bin = app.path().app_data_dir()?.join("bin");
+            emit_stage(app, &id, "onscreen", 0.0, "Reading on-screen text…");
+            let record = onscreen::read(&bin, &video, &dir, meta.duration_secs, cancel, |p, detail| {
+                emit_stage(app, &id, "onscreen", p * 0.9, detail);
+            })
+            .await?;
+            // Each passage starts with its kind ("[Email]") when the layout shows it.
+            let mut chunks: Vec<Chunk> = record
+                .screens
+                .iter()
+                .map(|s| Chunk { start: s.start, end: s.end, text: onscreen::passage_text(s), source: "ocr".into(), vector: Vec::new(), cues: Vec::new() })
+                .collect();
+            embed_chunks(app, state, &id, cancel, &mut chunks, "onscreen", "Indexing on-screen text…").await?;
+            let count = chunks.len();
+            merge_index(app, meta, &["ocr"], chunks)?;
+            Ok::<_, anyhow::Error>(count)
+        }
+        .await;
+        match result {
+            Ok(count) => {
+                meta.analysis.retain(|a| !a.starts_with("onscreen"));
+                meta.analysis.push("onscreen:3".into());
+                persist(app, meta)?;
+                emit_stage(app, &id, "onscreen", 1.0, format!("{count} screens of on-screen text indexed"));
+            }
+            Err(e) if cancelled(&e) => return Err(anyhow!("cancelled")),
+            Err(e) => emit_stage(app, &id, "onscreen", 0.0, format!("On-screen text unavailable: {e}")),
+        }
+    }
+
+    // Spelling suggestions: caption words that sound like names shown on
+    // screen, kept only when Whisper writes the on-screen spelling.
+    if !meta.analysis.iter().any(|a| a == "spellings") && meta.analysis.iter().any(|a| a == "onscreen:3") {
+        let result = async {
+            let cues = store::load_cues(app, &id)?;
+            let record = onscreen::load(&dir).ok_or_else(|| anyhow!("On-screen text is missing"))?;
+            let screens: Vec<(f64, f64, String)> = record.screens.iter().map(|s| (s.start, s.end, s.text.clone())).collect();
+            let candidates = spelling::candidates(&cues, &screens);
+            emit_stage(app, &id, "spellings", 0.1, format!("Checking {} possible caption misspellings by listening…", candidates.len()));
+            let spec = models::spec("whisper").unwrap();
+            if !candidates.is_empty() && !models::is_downloaded(app, spec) {
+                emit_stage(app, &id, "spellings", 0.1, format!("Downloading {}…", spec.label));
+                models::download(app, "whisper").await?;
+            }
+            let whisper_path = models::model_path(app, spec)?.to_string_lossy().into_owned();
+            let ffmpeg = ytdlp::find_ffmpeg().ok_or_else(|| anyhow!("ffmpeg not found"))?;
+            let whisper = state.whisper.clone();
+            let cancel2 = cancel.clone();
+            let video2 = video.clone();
+            let counts: HashMap<String, usize> = cues.iter().flat_map(|c| c.text.split(|ch: char| !ch.is_alphabetic()).map(str::to_lowercase).collect::<Vec<_>>()).fold(HashMap::new(), |mut m, w| { *m.entry(w).or_default() += 1; m });
+            let record = tauri::async_runtime::spawn_blocking(move || {
+                if candidates.is_empty() {
+                    return Ok(spelling::SpellingRecord { method: spelling::METHOD.into(), ..Default::default() });
+                }
+                let mut guard = whisper.lock().unwrap();
+                if guard.as_ref().map(|w| w.model_path != whisper_path).unwrap_or(true) {
+                    *guard = Some(WhisperEngine::load(&whisper_path)?);
+                }
+                let engine = guard.as_ref().expect("whisper loaded above");
+                let clip = |start: f64, length: f64| -> Result<Vec<f32>> {
+                    let output = std::process::Command::new(&ffmpeg)
+                        .args(["-hide_banner", "-loglevel", "error", "-ss", &format!("{start:.3}"), "-t", &format!("{length:.3}"), "-i"])
+                        .arg(&video2)
+                        .args(["-vn", "-ac", "1", "-ar", "16000", "-f", "f32le", "-"])
+                        .output()?;
+                    if !output.status.success() {
+                        return Err(anyhow!("ffmpeg could not cut an audio clip"));
+                    }
+                    Ok(output.stdout.chunks_exact(4).map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])).collect())
+                };
+                spelling::confirm(engine, &candidates, cancel2, clip, |w| counts.get(w).copied().unwrap_or(0))
+            })
+            .await??;
+            let path = dir.join("spellings.json");
+            let temp = path.with_extension("json.part");
+            std::fs::write(&temp, serde_json::to_vec_pretty(&record)?)?;
+            std::fs::rename(temp, path)?;
+            Ok::<_, anyhow::Error>(record)
+        }
+        .await;
+        match result {
+            Ok(record) => {
+                meta.analysis.push("spellings".into());
+                persist(app, meta)?;
+                let found = record.suggestions.iter().map(|s| format!("{} → {}", s.original, s.suggested)).collect::<Vec<_>>().join(", ");
+                emit_stage(app, &id, "spellings", 1.0, if found.is_empty() { "No caption misspellings confirmed".to_string() } else { format!("Suggested spellings for the archive: {found}") });
+            }
+            Err(e) if cancelled(&e) => return Err(anyhow!("cancelled")),
+            Err(e) => emit_stage(app, &id, "spellings", 0.0, format!("Spelling suggestions unavailable: {e}")),
+        }
+    }
+
+    // Scene descriptions: re-describe with the prompt that leaves wording to
+    // OCR when needed, then give keyframes that are screens of text a factual
+    // label from OCR of that exact frame instead of the model's guess.
+    if !meta.analysis.iter().any(|a| a == "scenes:4") && meta.analysis.iter().any(|a| a == "onscreen:3") {
+        let result = async {
+            if !scene_descriptions_current(&dir) {
+                emit_stage(app, &id, "scenes", 0.0, "Choosing keyframes across the video…");
+                let frames = extract_keyframes(app, &id, &video, &dir.join("frames"), meta.duration_secs).await?;
+                meta.frame_count = frames.len();
+                persist(app, meta)?;
+                let _ = std::fs::remove_file(dir.join("descriptions.json"));
+                describe_frames(app, state, meta, cancel, &frames).await?;
+            }
+            let descriptions = store::load_descriptions(app, &id)?;
+            emit_stage(app, &id, "scenes", 0.5, "Checking which keyframes are screens of text…");
+            let bin = app.path().app_data_dir()?.join("bin");
+            let times: Vec<f64> = descriptions.iter().map(|d| d.start).collect();
+            let keyframes = onscreen::read_keyframes(&bin, &video, &dir, &times).await?;
+            let record = onscreen::load(&dir).ok_or_else(|| anyhow!("On-screen text is missing"))?;
+            let overlays = onscreen::overlays(&record.samples, record.interval_secs);
+            let key = |t: f64| (t * 1000.0).round() as i64;
+            let mut chunks: Vec<Chunk> = descriptions
+                .into_iter()
+                .map(|mut d| {
+                    if let Some(label) = keyframes.iter().find(|k| key(k.ts) == key(d.start)).and_then(|k| onscreen::screen_frame_label(k, &overlays)) {
+                        d.text = label;
+                        d.source = "frame".into();
+                    }
+                    d
+                })
+                .collect();
+            // Reuse embeddings for unchanged passages; embed only new text.
+            let index = store::load_index(app, &id)?;
+            let mut fresh: Vec<Chunk> = chunks.iter().filter(|c| !index.iter().any(|i| i.start == c.start && i.text == c.text)).cloned().collect();
+            embed_chunks(app, state, &id, cancel, &mut fresh, "scenes", "Indexing scene descriptions…").await?;
+            for c in &mut chunks {
+                c.vector = index.iter().chain(&fresh).find(|i| i.start == c.start && i.text == c.text).map(|i| i.vector.clone()).unwrap_or_default();
+            }
+            let screens = chunks.iter().filter(|c| c.source == "frame").count();
+            merge_index(app, meta, &["vision", "frame"], chunks)?;
+            Ok::<_, anyhow::Error>(screens)
+        }
+        .await;
+        if state.cancels.lock().unwrap().len() <= 1 {
+            if let Ok(mut guard) = state.engine.lock() {
+                if let Some(engine) = guard.as_mut() {
+                    engine.unload_vision();
+                }
+            }
+        }
+        match result {
+            Ok(screens) => {
+                meta.analysis.retain(|a| !a.starts_with("scenes"));
+                meta.analysis.push("scenes:4".into());
+                persist(app, meta)?;
+                emit_stage(app, &id, "scenes", 1.0, format!("Scene descriptions updated; {screens} keyframes are screens of text, labeled from OCR"));
+            }
+            Err(e) if cancelled(&e) => return Err(anyhow!("cancelled")),
+            Err(e) => emit_stage(app, &id, "scenes", 0.0, format!("Scene descriptions unavailable: {e}")),
+        }
+    }
+    Ok(())
+}
+
+/// Run [`enrich`] on a ready video without taking it out of use. Progress is
+/// reported as ingest events; a final "ready" event refreshes its passages.
+pub async fn update_analysis(app: AppHandle, state: Arc<AppState>, mut meta: VideoMeta) {
+    let id = meta.id.clone();
+    let cancel = Arc::new(AtomicBool::new(false));
+    {
+        let mut cancels = state.cancels.lock().unwrap();
+        if cancels.contains_key(&id) {
+            emit_global_error(&app, format!("\"{}\" is already being processed.", meta.title));
+            return;
+        }
+        cancels.insert(id.clone(), cancel.clone());
+    }
+    let result = enrich(&app, &state, &mut meta, &cancel).await;
+    state.cancels.lock().unwrap().remove(&id);
+    if let Ok(fresh) = store::load_meta(&app, &id) {
+        let detail = match result {
+            Ok(()) if needs_enrichment(&fresh) => "Some analyses are unavailable. See the messages above.",
+            Ok(()) => "Voices, on-screen text and scene descriptions are up to date.",
+            Err(_) => "Analysis update cancelled. Completed work is kept.",
+        };
+        emit(&app, IngestProgress { video_id: id, stage: "ready".into(), progress: 1.0, detail: detail.into(), meta: Some(fresh) });
+    }
 }
 
 /// Chunk the transcript, embed everything, save the index.
@@ -716,37 +1052,7 @@ async fn build_index(
         return Err(anyhow!("nothing to index: the video produced no transcript or descriptions"));
     }
 
-    let engine = state.require_engine()?;
-    // Embed in batches, locking per batch, so chat stays responsive here too.
-    const BATCH: usize = 32;
-    let texts: Vec<String> = chunks.iter().map(|c| c.text.clone()).collect();
-    let n_texts = texts.len();
-    let app2 = app.clone();
-    let id2 = id.clone();
-    let cancel2 = cancel.clone();
-    let vectors: Vec<Vec<f32>> = tauri::async_runtime::spawn_blocking(move || {
-        let mut vectors = Vec::with_capacity(n_texts);
-        for batch in texts.chunks(BATCH) {
-            check_cancel(&cancel2).map_err(|_| anyhow!("cancelled"))?;
-            let guard = engine.lock().unwrap();
-            let engine = guard.as_ref().ok_or_else(|| anyhow!("engine not loaded"))?;
-            vectors.extend(engine.embed_texts(batch, false)?);
-            drop(guard);
-            emit_stage(
-                &app2,
-                &id2,
-                "index",
-                (vectors.len() as f32 / n_texts as f32).min(0.95),
-                "Embedding transcript and descriptions…",
-            );
-        }
-        Ok::<_, anyhow::Error>(vectors)
-    })
-    .await??;
-
-    for (chunk, vec) in chunks.iter_mut().zip(vectors) {
-        chunk.vector = vec;
-    }
+    embed_chunks(app, state, &id, cancel, &mut chunks, "index", "Embedding transcript and descriptions…").await?;
 
     if !store::meta_exists(app, &id) {
         return Err(anyhow!("cancelled"));

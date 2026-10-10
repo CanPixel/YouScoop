@@ -6,17 +6,10 @@ import SetupGate from "./components/SetupGate";
 import Sidebar from "./components/Sidebar";
 import VideoPane, { type VideoPaneHandle } from "./components/VideoPane";
 import ChatPane from "./components/ChatPane";
-import type {
-  ChatMessage,
-  ChunkPublic,
-  TranscriptCue,
-  IngestProgress,
-  ModelProgress,
-  SetupStatus,
-  VideoMeta,
-} from "./types";
+import DesktopRuntime from "./components/DesktopRuntime";
+import type { ChatMessage, ChunkPublic, TranscriptCue, IngestProgress, ModelProgress, SetupStatus, VideoMeta, WorkerStatus, VoiceSummary } from "./types";
 
-const REQUIRED_MODELS = ["vlm", "mmproj", "embed"];
+const REQUIRED_MODELS = ["vlm", "mmproj", "embed", "chat"];
 const CHATS_KEY = "youscoop-chats-v1";
 
 function loadChats(): Record<string, ChatMessage[]> {
@@ -38,11 +31,19 @@ export default function App() {
   const [videos, setVideos] = useState<VideoMeta[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [transcripts, setTranscripts] = useState<Record<string, TranscriptCue[]>>({});
+  const [voices, setVoices] = useState<Record<string, VoiceSummary[]>>({});
   const [chunks, setChunks] = useState<Record<string, ChunkPublic[]>>({});
   const [ingest, setIngest] = useState<Record<string, IngestProgress>>({});
 
   const [chats, setChats] = useState<Record<string, ChatMessage[]>>(loadChats);
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+  const [worker, setWorker] = useState<WorkerStatus | null>(null);
+  const [chatModel, setChatModel] = useState<"qwen" | "gemma">("qwen");
+  const [workerProgress, setWorkerProgress] = useState("");
+  const [inferenceStatus, setInferenceStatus] = useState("");
+  const refreshWorker = useCallback(() => {
+    void api.workerStatus().then(setWorker).catch(console.error);
+  }, []);
 
   const [addingUrl, setAddingUrl] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -72,8 +73,10 @@ export default function App() {
     try {
       const detail = await api.videoDetail(id);
       setTranscripts((prev) => ({ ...prev, [id]: detail.transcript }));
+      setVoices((prev) => ({ ...prev, [id]: detail.voices }));
       setChunks((prev) => ({ ...prev, [id]: detail.chunks }));
       setVideos((prev) => prev.map((v) => (v.id === id ? detail.meta : v)));
+      return detail;
     } catch (e) {
       console.error("video_detail failed", e);
     }
@@ -83,8 +86,13 @@ export default function App() {
   useEffect(() => {
     void refreshSetup();
     void refreshLibrary();
+    refreshWorker();
 
     const subs = [
+      events.onInferenceStatus(setInferenceStatus),
+      events.onWorkerProgress((p) => {
+        if (p.kind === "status" && p.detail) setWorkerProgress(p.detail);
+      }),
       events.onModelProgress((p) => {
         setModelProgress((prev) => ({ ...prev, [p.id]: p }));
         if (p.done) void refreshSetup();
@@ -133,14 +141,12 @@ export default function App() {
     return () => {
       for (const s of subs) void s.then((un) => un());
     };
-  }, [refreshSetup, refreshLibrary, fetchDetail]);
+  }, [refreshSetup, refreshLibrary, fetchDetail, refreshWorker]);
 
   // ---- auto-load engine once required models exist ----
   useEffect(() => {
     if (!setup || setup.engineLoaded || setup.engineLoading || engineLoadRequested.current) return;
-    const ready = setup.models
-      .filter((m) => REQUIRED_MODELS.includes(m.id))
-      .every((m) => m.downloaded);
+    const ready = REQUIRED_MODELS.every((id) => setup.models.some((m) => m.id === id && m.downloaded));
     if (ready) {
       engineLoadRequested.current = true;
       api.loadEngine().catch((e) => {
@@ -235,12 +241,14 @@ export default function App() {
       const draft: ChatMessage = { id: uid(), role: "assistant", text: "", streaming: true };
       setChats((prev) => ({ ...prev, [videoId]: [...(prev[videoId] ?? []), userMsg, draft] }));
       setGeneratingFor(videoId);
+      setWorkerProgress("Preparing investigation");
+      setInferenceStatus("Preparing answer");
 
       try {
         // `ask_video` resolves with { answer, sources } — assigning the whole
         // struct to `text` is what used to blank the window when a stream
         // finished, since MessageBody then called .split on an object.
-        const { answer } = await api.askVideo(videoId, question, history.slice(-2));
+        const { answer } = await (chatModel === "gemma" ? api.askGemma : api.askVideo)(videoId, question, history.slice(-2));
         setChats((prev) => {
           const list = prev[videoId] ?? [];
           const updated = list.map((m) =>
@@ -262,7 +270,7 @@ export default function App() {
         setGeneratingFor(null);
       }
     },
-    [chats],
+    [chats, chatModel],
   );
 
   const selected = useMemo(
@@ -272,8 +280,7 @@ export default function App() {
 
   const needsSetup =
     !setup ||
-    !setup.engineLoaded ||
-    !setup.models.filter((m) => REQUIRED_MODELS.includes(m.id)).every((m) => m.downloaded);
+    !REQUIRED_MODELS.every((id) => setup.models.some((m) => m.id === id && m.downloaded));
 
   if (!setup) {
     return (
@@ -315,16 +322,28 @@ export default function App() {
             meta={selected}
             chunks={chunks[selected.id] ?? []}
             transcript={transcripts[selected.id] ?? []}
+            voices={voices[selected.id] ?? []}
             ingest={ingest[selected.id]}
             onCancelIngest={() => void api.cancelIngest(selected.id)}
+            onUpdateAnalysis={() => api.updateAnalysis(selected.id)}
             onRetry={() => retryVideo(selected.id)}
+            worker={worker}
+            onWorkerChanged={refreshWorker}
+            busy={generatingFor !== null}
           />
           <ChatPane
             meta={selected}
             messages={chats[selected.id] ?? []}
             generating={generatingFor === selected.id}
+            progress={chatModel === "gemma" ? workerProgress : inferenceStatus}
+            engineError={engineError}
+            onRetryEngine={() => { setEngineError(null); void api.loadEngine().catch((e) => setEngineError(String(e))); }}
+            blocked={generatingFor !== null && generatingFor !== selected.id}
+            model={chatModel}
+            onModelChange={setChatModel}
+            gemmaReady={worker?.gemmaReady ?? false}
             onSend={(q) => void sendQuestion(selected.id, q)}
-            onStop={() => void api.stopChat()}
+            onStop={() => { void api.stopChat(); void api.stopWorker(); }}
             onSeek={(secs) => videoPaneRef.current?.seekTo(secs)}
           />
         </main>
@@ -344,6 +363,7 @@ export default function App() {
               <div><span>3</span> Ask anything, click timestamps to jump</div>
             </div>
             <p className="welcome-privacy">100% on-device · no accounts · no API keys</p>
+            <DesktopRuntime status={worker} onChanged={refreshWorker} />
           </div>
         </main>
       )}

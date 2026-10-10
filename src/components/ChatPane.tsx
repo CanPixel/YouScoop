@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import MessageBody from "./MessageBody";
+import { api } from "../api";
 import type { ChatMessage, VideoMeta } from "../types";
 
 interface Props {
   meta: VideoMeta;
   messages: ChatMessage[];
   generating: boolean;
+  progress: string;
+  engineError: string | null;
+  onRetryEngine: () => void;
+  blocked: boolean;
+  model: "qwen" | "gemma";
+  onModelChange: (model: "qwen" | "gemma") => void;
+  gemmaReady: boolean;
   onSend: (question: string) => void;
   onStop: () => void;
   onSeek: (secs: number) => void;
@@ -36,7 +44,7 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export default function ChatPane({ meta, messages, generating, onSend, onStop, onSeek }: Props) {
+export default function ChatPane({ meta, messages, generating, progress, engineError, onRetryEngine, blocked, model, onModelChange, gemmaReady, onSend, onStop, onSeek }: Props) {
   const [input, setInput] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -76,10 +84,23 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
 
   const send = (text: string) => {
     const q = text.trim();
-    if (!q || generating || !ready) return;
+    if (!q || generating || blocked || !ready) return;
     onSend(q);
     setInput("");
     inputRef.current?.focus();
+  };
+
+  const [sent, setSent] = useState<Record<string, string>>({});
+  /** Send one answer, with the question that asked it, to WiZMUTH's inbox. */
+  const sendToWizmuth = async (m: ChatMessage) => {
+    const index = messages.findIndex((x) => x.id === m.id);
+    const question = index > 0 && messages[index - 1].role === "user" ? messages[index - 1].text : "Answer";
+    try {
+      const note = await api.sendAnswerToWizmuth(meta.id, question, m.text);
+      setSent((s) => ({ ...s, [m.id]: note.path }));
+    } catch (error) {
+      setSent((s) => ({ ...s, [m.id]: `error:${String(error)}` }));
+    }
   };
 
   const copyMessage = async (m: ChatMessage) => {
@@ -95,9 +116,13 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
         <div className="chat-head-title">Chat</div>
         <div className="chat-head-sub">
           {ready
-            ? `${meta.chunkCount} indexed moments · Qwen3 4B`
+            ? `${meta.chunkCount} indexed moments · ${model === "gemma" ? "Gemma 4 A4B" : "Qwen3 4B"}`
             : "Available once processing finishes"}
         </div>
+        <select className="chat-model-select" aria-label="Investigative chat model" value={model} disabled={generating || blocked} onChange={(e) => onModelChange(e.target.value as "qwen" | "gemma")}>
+          <option value="qwen">Qwen3 4B · quick</option>
+          <option value="gemma" disabled={!gemmaReady}>Gemma 4 A4B · deep</option>
+        </select>
       </header>
 
       <div className="chat-scroll" ref={scrollRef}>
@@ -140,6 +165,15 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
                     {copiedId === m.id ? "✓ Copied" : "⧉ Copy"}
                   </button>
                 )}
+                {m.role === "assistant" && !m.streaming && m.text && !m.error && (
+                  <button
+                    className={`msg-copy ${sent[m.id] && !sent[m.id].startsWith("error:") ? "copied" : ""}`}
+                    title={sent[m.id]?.startsWith("error:") ? sent[m.id].slice(6) : "Send this answer to WiZMUTH as a note"}
+                    onClick={() => void sendToWizmuth(m)}
+                  >
+                    {sent[m.id] ? (sent[m.id].startsWith("error:") ? "Could not send" : "✓ In WiZMUTH") : "→ WiZMUTH"}
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -147,6 +181,11 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
       </div>
 
       <div className="chat-input-area">
+        {engineError && model === "qwen" && <div className="inference-error" role="alert">
+          <p>{engineError}</p>
+          <button className="btn btn-ghost btn-sm" onClick={onRetryEngine} disabled={generating || blocked}>Retry local engine</button>
+        </div>}
+        {generating && progress && <p className="inference-status" role="status">{progress}</p>}
         {generating && (
           <button className="btn btn-ghost btn-sm chat-stop" onClick={onStop}>
             ■ Stop generating
@@ -165,7 +204,7 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
             placeholder={ready ? "Ask about the video…" : "Waiting for processing…"}
             value={input}
             rows={1}
-            disabled={!ready || generating}
+            disabled={!ready || generating || blocked}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -177,7 +216,7 @@ export default function ChatPane({ meta, messages, generating, onSend, onStop, o
           <button
             type="submit"
             className="btn btn-primary chat-send"
-            disabled={!ready || generating || !input.trim()}
+            disabled={!ready || generating || blocked || !input.trim()}
             title="Send"
           >
             ↑

@@ -33,6 +33,9 @@ pub struct VideoMeta {
     /// questions ("what is this video about?") that retrieval alone can't answer.
     #[serde(default)]
     pub summary: Option<String>,
+    /// Completed enrichment analyses ("voices", "onscreen"); see pipeline::ANALYSES.
+    #[serde(default)]
+    pub analysis: Vec<String>,
 }
 
 impl VideoMeta {
@@ -64,6 +67,9 @@ pub struct Chunk {
 pub struct SubCue {
     pub start: f64,
     pub text: String,
+    /// Automatic voice cluster ("Voice A"), when voice separation ran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice: Option<String>,
 }
 
 /// Chunk as exposed to the frontend (no embedding vector).
@@ -192,7 +198,10 @@ pub fn load_descriptions(app: &AppHandle, id: &str) -> Result<Vec<Chunk>> {
 
 pub fn save_index(app: &AppHandle, id: &str, chunks: &[Chunk]) -> Result<()> {
     let path = video_dir(app, id)?.join("index.json");
-    std::fs::write(path, serde_json::to_vec(chunks)?)?;
+    let temp = path.with_extension("json.part");
+    std::fs::write(&temp, serde_json::to_vec(chunks)?)?;
+    std::fs::File::open(&temp)?.sync_all()?;
+    std::fs::rename(temp, path)?;
     Ok(())
 }
 

@@ -36,6 +36,22 @@ struct VisionCtx {
     model: LlamaModel,
 }
 
+/// On-screen text is read separately by OCR at full resolution; at 512 px the
+/// frame model invented words when asked to transcribe (see onscreen.rs).
+pub const FRAME_INSTRUCTION: &str = "Describe this video frame in one or two short sentences: who is visible and what they are wearing, what they are doing, the setting, and notable objects. If text, a document, a web page or an email is shown, say what kind it is, but do not quote or transcribe its words. Mention only what you can clearly see and leave out anything you are unsure of. Do not guess names of people, places, or objects.";
+
+/// The chat template for each supported frame model, chosen by file name.
+pub fn vision_prompt(model_path: &str, instruction: &str, marker: &str) -> String {
+    let name = std::path::Path::new(model_path).file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+    if name.contains("qwen2.5-vl") {
+        format!("<|im_start|>system\nYou are a careful visual describer.<|im_end|>\n<|im_start|>user\n{marker}{instruction}<|im_end|>\n<|im_start|>assistant\n")
+    } else if name.contains("gemma-3") {
+        format!("<start_of_turn>user\n{marker}{instruction}<end_of_turn>\n<start_of_turn>model\n")
+    } else {
+        format!("<|im_start|>User: {marker}{instruction}<end_of_utterance>\nAssistant:")
+    }
+}
+
 pub struct Engine {
     vision: Option<VisionCtx>,
     vlm_path: String,
@@ -87,7 +103,9 @@ impl Engine {
         let model = LlamaModel::load_from_file(&self.backend, &self.vlm_path, &gpu_params)
             .context("failed to load SmolVLM2 model")?;
         let mtmd_params = MtmdContextParams {
-            use_gpu: true,
+            // Qwen2.5-VL's image encoder returns NaN output on Metal in this
+            // llama.cpp build (the model then writes only "!"); on the CPU it is correct.
+            use_gpu: !self.vlm_path.to_lowercase().contains("qwen2.5-vl"),
             print_timings: false,
             n_threads: n_threads(),
             media_marker: CString::new(mtmd_default_marker())?,
@@ -98,6 +116,19 @@ impl Engine {
             .map_err(|e| anyhow!("failed to load vision projector: {e}"))?;
         self.vision = Some(VisionCtx { mtmd, model });
         Ok(())
+    }
+
+    /// Use a different frame model from the next description on.
+    pub fn use_frame_model(&mut self, vlm_path: &str, mmproj_path: &str) {
+        if self.vlm_path != vlm_path || self.mmproj_path != mmproj_path {
+            self.vision = None;
+            self.vlm_path = vlm_path.to_string();
+            self.mmproj_path = mmproj_path.to_string();
+        }
+    }
+    /// The frame model in use, for provenance.
+    pub fn frame_model_label(&self) -> &'static str {
+        if self.vlm_path.to_lowercase().contains("qwen2.5-vl") { "Qwen2.5-VL-3B-Instruct Q4_K_M" } else { "SmolVLM2-2.2B-Instruct Q4_K_M" }
     }
 
     /// Drop the vision stack, freeing its Metal buffers. Safe to call anytime;
@@ -126,14 +157,7 @@ impl Engine {
         let bitmap = MtmdBitmap::from_file(&vision.mtmd, image_path, false)
             .map_err(|e| anyhow!("could not read frame image: {e}"))?;
 
-        let prompt = format!(
-            "<|im_start|>User: {}Describe this video frame in one or two short sentences. \
-             Mention the subjects, what is happening, any visible text, and the setting. \
-             Describe only what is actually visible; transcribe on-screen text exactly. \
-             Do not guess names of people, places, or objects, and do not add facts that \
-             are not shown in the image.<end_of_utterance>\nAssistant:",
-            mtmd_default_marker()
-        );
+        let prompt = vision_prompt(&self.vlm_path, FRAME_INSTRUCTION, mtmd_default_marker());
         let input = MtmdInputText {
             text: prompt,
             add_special: false,
@@ -152,7 +176,8 @@ impl Engine {
             LlamaSampler::penalties(64, 1.15, 0.0, 0.0),
             LlamaSampler::greedy(),
         ]);
-        generate(&mut ctx, &vision.model, n_past, 96, sampler, cancel, &mut |_| {})
+        let text = generate(&mut ctx, &vision.model, n_past, 160, sampler, cancel, &mut |_| {})?;
+        Ok(whole_sentences(&text))
     }
 
     /// Text-only chat completion on the dedicated chat model (ChatML prompt),
@@ -246,6 +271,26 @@ impl Engine {
     }
 }
 
+/// Drop a sentence cut off by the token limit, so a description never ends
+/// mid-phrase. Text with no complete sentence is kept as it is.
+fn whole_sentences(text: &str) -> String {
+    let text = text.trim();
+    if text.ends_with(['.', '!', '?', '"']) {
+        return text.to_string();
+    }
+    // A sentence ends at punctuation followed by a space, so "1.5" is not one.
+    let end = text
+        .char_indices()
+        .zip(text.chars().skip(1))
+        .filter(|((_, c), next)| matches!(c, '.' | '!' | '?') && next.is_whitespace())
+        .map(|((i, _), _)| i)
+        .last();
+    match end {
+        Some(end) => text[..=end].to_string(),
+        None => text.to_string(),
+    }
+}
+
 fn generate(
     ctx: &mut LlamaContext,
     model: &LlamaModel,
@@ -331,5 +376,19 @@ fn flush_utf8(pending: &mut Vec<u8>, out: &mut String, on_token: &mut dyn FnMut(
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::whole_sentences;
+
+    #[test]
+    fn cut_descriptions_end_on_a_whole_sentence() {
+        assert_eq!(whole_sentences("A man sits at a desk. The room has"), "A man sits at a desk.");
+        assert_eq!(whole_sentences("A man sits. A laptop reads \"GET THE FULL 1.5 HOUR"), "A man sits.");
+        assert_eq!(whole_sentences("A man sits at a desk."), "A man sits at a desk.");
+        assert_eq!(whole_sentences("Text reads \"AVAILABLE ON PATREON.\""), "Text reads \"AVAILABLE ON PATREON.\"");
+        assert_eq!(whole_sentences("A man sits at a desk with"), "A man sits at a desk with");
     }
 }

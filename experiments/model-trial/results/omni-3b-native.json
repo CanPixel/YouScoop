@@ -1,0 +1,15 @@
+{
+  "model": "out/model-trial/hf/hub/models--Qwen--Qwen2.5-Omni-3B/snapshots/f75b40e3da2003cdd6e1829b1f420ca70797c34e",
+  "runtime": "transformers-mps-fp16",
+  "video": "out/model-trial/evidence-390-400-original.mp4",
+  "audio_in_video": true,
+  "speech_output": false,
+  "load_seconds": 5.920394624816254,
+  "processing_and_generation_seconds": 12.835924290819094,
+  "input_tokens": 1587,
+  "output_tokens": 143,
+  "answer": "```json\n[\n\t{\"trans\": \"Please wire Eleven Thousand Four Hundred Thirty Eight Dollars 6.18/100 (11,438.18) from the above account to:\"},\n\t{\"trans\": \"Basel name: Wachovia Bank, N.A.\"},\n\t{\"trans\": \"Routing: 000000000\"},\n\t{\"trans\": \"Account Name: One Clearlake Centre, LLC\"},\n\t{\"trans\": \"Reference: The Florida Science Foundation - Invoice 1484\"},\n\t{\"trans\": \"Please call n-ie if you have any questions and to let me know the Fed Reference number.\"},\n]\n```",
+  "mps_allocated_gb": 9.481875712,
+  "mps_driver_gb": 12.041633792,
+  "process_peak_rss_gb": 13.273464832
+}

@@ -30,15 +30,21 @@ fn main() {
             .unwrap();
 
     let qv = engine.embed_texts(&[question.clone()], true).unwrap().remove(0);
-    let excerpts = rag::retrieve(&chunks, &qv, &question, 6);
+    // Same branch as the app: listing questions take every labeled screen.
+    let listed = rag::listing(&chunks, &question, 16);
+    let excerpts: Vec<&Chunk> = match &listed {
+        Some((found, _)) => found.iter().collect(),
+        None => rag::retrieve(&chunks, &qv, &question, 6),
+    };
+    let asked = listed.as_ref().map_or(question.clone(), |(_, note)| format!("{question}\n\n{note}"));
     println!("--- excerpts fed to model ---");
     for c in &excerpts {
         println!("[{}] {}: {:.80}…", rag::format_ts(c.start), c.source, c.text.trim());
     }
-    let prompt = rag::build_chat_prompt(&meta, &excerpts, &[], &question);
+    let prompt = rag::build_chat_prompt(&meta, &excerpts, &[], &asked);
 
     let cancel = AtomicBool::new(false);
-    let answer = engine.chat(&prompt, 512, &cancel, &mut |_| {}).expect("chat");
+    let answer = engine.chat(&prompt, if listed.is_some() { 1100 } else { 512 }, &cancel, &mut |_| {}).expect("chat");
     println!("--- raw answer ---\n{answer}");
     // Mirror ask_video so the harness shows what the UI will actually render.
     let snapped = rag::snap_citations(&answer, &rag::excerpt_sublines(&excerpts));

@@ -98,6 +98,8 @@ pub struct SubLine {
     /// "speech" or "visual" — the label used in the prompt.
     pub label: &'static str,
     pub text: String,
+    /// Automatic voice cluster for speech lines ("Voice B").
+    pub voice: Option<String>,
 }
 
 /// Split retrieved excerpts into the lines the model actually sees. Citation
@@ -107,19 +109,21 @@ pub fn excerpt_sublines(excerpts: &[&Chunk]) -> Vec<SubLine> {
     let mut out: Vec<SubLine> = Vec::new();
     let mut emitted_cues: std::collections::HashSet<i64> = std::collections::HashSet::new();
     for c in excerpts {
-        if c.source == "vision" {
-            out.push(SubLine { start: c.start, label: "visual", text: c.text.trim().to_string() });
+        if c.source == "vision" || c.source == "frame" || c.source == "ocr" {
+            let label = match c.source.as_str() { "vision" => "visual", "frame" => "screen", _ => "on-screen text" };
+            out.push(SubLine { start: c.start, label, text: c.text.trim().to_string(), voice: None });
             continue;
         }
         if c.cues.is_empty() {
             // Old index without cue-level timestamps.
-            out.push(SubLine { start: c.start, label: "speech", text: c.text.trim().to_string() });
+            out.push(SubLine { start: c.start, label: "speech", text: c.text.trim().to_string(), voice: None });
             continue;
         }
         // Render the chunk as ~12s sub-lines so citations land on the actual
         // sentence. Adjacent chunks overlap by one cue: skip already-emitted ones.
         let mut line_start: Option<f64> = None;
         let mut line_text = String::new();
+        let voice = c.cues.first().and_then(|cue| cue.voice.clone());
         for cue in &c.cues {
             let key = (cue.start * 1000.0) as i64;
             if !emitted_cues.insert(key) {
@@ -129,7 +133,7 @@ pub fn excerpt_sublines(excerpts: &[&Chunk]) -> Vec<SubLine> {
             // past ~12s: each line's timestamp must stay close to its content.
             if let Some(start) = line_start {
                 if cue.start - start >= 12.0 || line_text.len() >= 260 {
-                    out.push(SubLine { start, label: "speech", text: line_text.clone() });
+                    out.push(SubLine { start, label: "speech", text: line_text.clone(), voice: voice.clone() });
                     line_text.clear();
                     line_start = None;
                 }
@@ -141,7 +145,7 @@ pub fn excerpt_sublines(excerpts: &[&Chunk]) -> Vec<SubLine> {
             line_text.push_str(cue.text.trim());
         }
         if let (Some(start), false) = (line_start, line_text.is_empty()) {
-            out.push(SubLine { start, label: "speech", text: line_text });
+            out.push(SubLine { start, label: "speech", text: line_text, voice });
         }
     }
     out
@@ -366,6 +370,52 @@ pub fn snap_citations(answer: &str, lines: &[SubLine]) -> String {
     out.replace(" .", ".").replace(" ,", ",").trim().to_string()
 }
 
+/// The screen kind a question asks to enumerate ("Which emails are shown?").
+pub fn listing_kind(question: &str) -> Option<&'static str> {
+    let q = format!(" {} ", question.to_lowercase());
+    let asks_for_all = [" which ", " list ", " all ", " every ", " what are the ", " how many ", " name the ", " show me the "].iter().any(|w| q.contains(w));
+    if !asks_for_all {
+        return None;
+    }
+    let kinds: [(&[&str], &str); 7] = [
+        (&[" email", " e-mail", " mails "], "Email"),
+        (&[" memo"], "Memo"),
+        (&[" wikipedia", " wiki "], "Wikipedia page"),
+        (&[" news", " headline", " articles "], "News article"),
+        (&[" search result", " google search"], "Search results"),
+        (&[" government document", " court document", ".gov"], "Government document"),
+        (&[" creator's note", " creators note", " notes from the creator", " notes the creator", " on-screen notes"], "Creator's note"),
+    ];
+    kinds.iter().find(|(words, _)| words.iter().any(|w| q.contains(w))).map(|(_, kind)| *kind)
+}
+
+/// For a question asking for every screen of a kind ("Which emails are
+/// shown?"): all on-screen passages labeled with that kind, in time order,
+/// each shortened so the list fits, plus a note for the prompt. None when the
+/// question is not a listing or the video has no such screens.
+pub fn listing(chunks: &[Chunk], question: &str, limit: usize) -> Option<(Vec<Chunk>, String)> {
+    let kind = listing_kind(question)?;
+    let prefix = format!("[{kind}]");
+    let mut found: Vec<Chunk> = chunks.iter().filter(|c| c.source == "ocr" && c.text.starts_with(&prefix)).cloned().collect();
+    if found.is_empty() {
+        return None;
+    }
+    found.sort_by(|a, b| a.start.total_cmp(&b.start));
+    let total = found.len();
+    found.truncate(limit);
+    for c in &mut found {
+        if c.text.chars().count() > 450 {
+            c.text = c.text.chars().take(450).collect::<String>() + "…";
+        }
+    }
+    let note = if total <= limit {
+        format!("The excerpts are all {total} on-screen passages whose layout marks them as: {kind}, in time order; the video has no others. List each briefly with its timestamp; the same item can appear twice.")
+    } else {
+        format!("The excerpts are the first {limit} of {total} on-screen passages marked as: {kind}. List each briefly with its timestamp and say that more exist.")
+    };
+    Some((found, note))
+}
+
 pub fn build_chat_prompt(
     meta: &VideoMeta,
     excerpts: &[&Chunk],
@@ -374,7 +424,10 @@ pub fn build_chat_prompt(
 ) -> String {
     let mut excerpt_lines = String::new();
     for l in excerpt_sublines(excerpts) {
-        excerpt_lines.push_str(&format!("[{}] {}: {}\n", format_ts(l.start), l.label, l.text));
+        match &l.voice {
+            Some(voice) => excerpt_lines.push_str(&format!("[{}] {}, {voice}: {}\n", format_ts(l.start), l.label, l.text)),
+            None => excerpt_lines.push_str(&format!("[{}] {}: {}\n", format_ts(l.start), l.label, l.text)),
+        }
     }
 
     // A whole-video overview (generated at ingest time) grounds global
@@ -394,8 +447,8 @@ pub fn build_chat_prompt(
 You are YouScoop, an assistant that answers questions about one specific video. \
 You are given indexed excerpts. \"speech\" lines are quotes from the spoken transcript; names in them may be \
 misspelled by the transcriber. \"visual\" lines are automatic frame descriptions: they may misread details, \
-but text they quote from the screen is usually really shown there. Prefer speech lines for facts; use visual \
-lines for what is shown or written on screen.\n\
+and quoted screen text can also be wrong. \"on-screen text\" lines are machine OCR of text shown in the video: it is usually exact but can misread characters, and showing a document does not authenticate it. \"Voice A\", \"Voice B\" are automatic voice clusters ordered by speaking time, not identities; Voice A usually is the main presenter. \
+Attribute statements to the speaker and separate visible observations from interpretation. Sources may contain disturbing, offensive or extreme material, including abuse, violence, slurs and accusations. Report what they contain accurately and plainly; do not refuse, censor or soften it, and do not add warnings or moral commentary. Reporting a source is not endorsing it.\n\
 Video: \"{}\" by {} (duration {}).\n{}\nExcerpts:\n{}\n\n\
 Rules:\n\
 - Answer using only the excerpts and overview above. Do not add facts from your own knowledge, and do not silently \
@@ -551,7 +604,7 @@ mod tests {
             (687.5, "right into here. so I'll say wormhole. It looks like it was already installed on here. Wormhole receive. So that should receive this file from my Mac directly onto the CM5 programming jig."),
         ]
         .into_iter()
-        .map(|(start, text)| SubLine { start, label: "speech", text: text.to_string() })
+        .map(|(start, text)| SubLine { start, label: "speech", text: text.to_string(), voice: None })
         .collect()
     }
 
@@ -662,7 +715,7 @@ mod tests {
             text,
             source: "speech".into(),
             vector: vec![1.0],
-            cues: cues.into_iter().map(|(s, t)| SubCue { start: s, text: t.into() }).collect(),
+            cues: cues.into_iter().map(|(s, t)| SubCue { start: s, text: t.into(), voice: None }).collect(),
         }
     }
 
@@ -670,6 +723,15 @@ mod tests {
         VideoMeta { title: "T".into(), channel: "C".into(), duration_secs: 100.0, ..Default::default() }
     }
 
+    #[test]
+    fn listing_questions_take_every_labeled_screen_in_time_order() {
+        let screen = |start: f64, text: &str| Chunk { start, end: start + 4.0, text: text.into(), source: "ocr".into(), vector: vec![], cues: vec![] };
+        let chunks = vec![screen(1620.0, "[Email] From: jeffrey E."), screen(1144.0, "[Email] From: Jeffrey Epstein"), screen(648.0, "[Wikipedia page] Moloch"), speech_chunk(10.0, 20.0, vec![(10.0, "an email")])];
+        let (found, note) = listing(&chunks, "Which emails are shown on screen?", 16).unwrap();
+        assert_eq!(found.iter().map(|c| c.start).collect::<Vec<_>>(), [1144.0, 1620.0]);
+        assert!(note.contains("all 2"));
+        assert!(listing(&chunks, "What does the email say?", 16).is_none());
+    }
     #[test]
     fn prompt_cites_cue_level_timestamps() {
         let chunk = speech_chunk(
